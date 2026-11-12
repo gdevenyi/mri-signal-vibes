@@ -607,7 +607,7 @@ function createSlider(container, pKey, initVal, onChange, isCompact, idPrefix = 
         }
 
         // Auto-expand max if input > max (except Theta and Rho)
-        if (pKey !== 'Theta' && pKey !== 'Rho' && newVal > def.max) {
+        if (pKey !== 'Theta' && pKey !== 'Rho' && newVal > parseFloat(slider.max)) {
             const newMax = Math.ceil(newVal * 1.5);
             slider.max = newMax;
             valInput.max = newMax;
@@ -635,9 +635,10 @@ function addTissue() {
     // Use the first colour that no tissue has at this time
     const usedColors = tissues.map(t => t.color);
     const color = tissueColors.find(c => !usedColors.includes(c)) || tissueColors[tissues.length % tissueColors.length];
+    const id = nextTissueId++;
     tissues.push({
-        id: nextTissueId++,
-        name: `Tissue ${nextTissueId}`,
+        id: id,
+        name: `Tissue ${id}`,
         params: { T1: 800, T2: 80, T2s: 40, Rho: 1.0 },
         color: color
     });
@@ -707,7 +708,8 @@ function updateChart() {
         const yValues = [];
 
         for (let i = 0; i <= steps; i++) {
-            const xVal = def.min + (range * (i / steps));
+            let xVal = def.min + (range * (i / steps));
+            if (xAxisParam === 'ETL') xVal = Math.round(xVal);
 
             // Build current call params
             let sP = { ...currentSeqParams };
