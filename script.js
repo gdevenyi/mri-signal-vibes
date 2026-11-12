@@ -222,7 +222,7 @@ function renderReferenceTable() {
             const badge = document.createElement('span');
             badge.className = 'lit-badge lit-badge-muted';
             badge.textContent = 'Read once';
-            badge.title = 'The values were read one time in the full text. A second check against a fresh copy of the source was not possible.';
+            badge.title = 'The values were read one time in the full text. It was not possible to find them again in a second copy of the source.';
             detailsTd.appendChild(badge);
         }
         if (r.converted_from_rate) {

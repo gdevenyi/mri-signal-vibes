@@ -55,7 +55,9 @@ The **Reference Values** page also has a table of published brain relaxation val
 
 Each row is one measurement from one source. Rows are not averaged, and different sources can disagree. For ex vivo tissue, the fixation, the temperature and contrast agents change the values significantly, so the table shows them. Rows with a contrast agent in the sample have a "Contrast agent" mark.
 
-The data are in `reference-data.js`. Each record has the text of the source that contains the values (`quote`). Records with `checked: false` (a "Read once" mark in the table) were read one time in the publisher full text, and a second check against a fresh copy of the source was not possible.
+The data are in `reference-data.js`. Each record has the text of the source that contains the values (`quote`). For records with `checked: true`, the quote or all its numbers were found again in a second, fresh copy of the abstract or the open full text. This shows that the values are in the source. It does not fully prove that each value is with the correct tissue, so compare important values with the paper. Records with `checked: false` (a "Read once" mark in the table) were read one time in the publisher full text, and a second copy was not available.
+
+The ± value is the error as printed in the source. It is usually an SD. If the source gives a standard error, a median or an approximate value, the notes of the row say so. Some rows are not healthy adult tissue (for example multiple sclerosis tissue, aged or juvenile animals, or the control side of a disease model); the details of the row say so.
 
 The table is not complete. Some combinations have no row because no value was found or because the paper was not available to read: for example human in vivo above 9.4 T, mouse and rat at 14.1 T, and mouse at clinical field strengths.
 
