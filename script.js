@@ -38,6 +38,15 @@ const sequences = {
         params: ['TR', 'TE', 'ETL', 'ESP', 'T1', 'T2', 'Rho'],
         citation: 'Fast Spin Echo Signal Equation with Full Spin Echo Formulation',
         url: '',
+        // The default TE (20 ms) puts the first echoes before the excitation pulse.
+        defaults: { TE: 80 },
+        // The echo train is centred on TE. All echoes must occur after the
+        // excitation (TE_1 > 0) and before the next one (TE_ETL <= TR).
+        valid: (seqP) => {
+            const { TR, TE, ETL, ESP } = seqP;
+            const halfTrain = ((ETL - 1) / 2) * ESP;
+            return TE - halfTrain > 0 && TE + halfTrain <= TR;
+        },
         equationStr: '$$ S = \\frac{\\rho}{ETL} \\sum_{k=1}^{ETL} \\left[1 - 2\\exp\\left(-\\frac{TR-TE_k/2}{T_1}\\right) + \\exp\\left(-\\frac{TR}{T_1}\\right)\\right] \\cdot \\exp\\left(-\\frac{TE_k}{T_2}\\right) $$',
         calc: (seqP, tissueP) => {
             // Full FSE formulation accounting for echo train
@@ -102,48 +111,41 @@ const sequences = {
     'FISP': {
         name: 'FISP (Steady State)',
         params: ['TR', 'TE', 'Theta', 'T1', 'T2', 'T2s', 'Rho'],
-        citation: 'MRIQuestions.com',
+        citation: 'MRIQuestions.com, with corrections from Hänicke & Vogel, Magn Reson Med 2003;49:771-775',
         url: 'https://mriquestions.com/grassfisp-parameters.html',
-        equationStr: '$$ S = \\rho \\tan(\\frac{\\theta}{2}) \\left[ 1 - (e^{TR/T1} - \\cos \\theta) \\sqrt{\\frac{1 - e^{-2TR/T2}}{(1 - e^{-TR/T1})^2 - e^{-2TR/T2}(e^{-TR/T1} - \\cos \\theta)^2}} \\right] e^{-TE/T2^*} $$',
+        // The equation image on the cited page has two errors: e^{+TR/T1} in the
+        // bracket and (1 - e^{-TR/T1})^2 in the root. That form gives negative or
+        // NaN signals. The form below is the SSFP-FID solution (Hanicke & Vogel,
+        // Magn Reson Med 2003;49:771-775). It becomes the SPGR equation when T2 -> 0.
+        equationStr: '$$ S = \\rho \\tan(\\frac{\\theta}{2}) \\left[ 1 - (e^{-TR/T1} - \\cos \\theta) \\sqrt{\\frac{1 - e^{-2TR/T2}}{(1 - e^{-TR/T1} \\cos \\theta)^2 - e^{-2TR/T2}(e^{-TR/T1} - \\cos \\theta)^2}} \\right] e^{-TE/T2^*} $$',
         calc: (seqP, tissueP) => {
-            // FISP Equation (User Provided Image)
             const { TR, TE, Theta } = seqP;
             let { T1, T2, T2s, Rho } = tissueP;
             if (T1 <= 0) T1 = 1;
             if (T2 <= 0) T2 = 1;
             if (T2s <= 0) T2s = 1;
 
+            // tan(theta/2) has no limit at 180 degrees, but the signal goes to 0.
+            if (Theta >= 180) return 0;
+
             const alphaRad = Theta * Math.PI / 180;
-
-            // Terms
-            // tan(a/2)
-            // if alpha is 180, tan(90) is infinite. handle gracefully?
-            // standard MRI flip angles are usually < 180. Using Math.tan might return large number.
             const tan_a_2 = Math.tan(alphaRad / 2);
-
-            const exp_pos_TR_T1 = Math.exp(TR / T1);
-            const exp_neg_TR_T1 = Math.exp(-TR / T1);
-            const exp_neg_2TR_T2 = Math.exp(-2 * TR / T2);
-            const exp_neg_TE_T2s = Math.exp(-TE / T2s);
-
             const cos_alpha = Math.cos(alphaRad);
 
-            // Sqrt Term
-            const num_sqrt = 1 - exp_neg_2TR_T2;
+            const E1 = Math.exp(-TR / T1);
+            const E2_sq = Math.exp(-2 * TR / T2);
+            const E_TE = Math.exp(-TE / T2s);
 
-            // Denominator inside sqrt
-            // (1 - e^-TR/T1)^2 - e^-2TR/T2 * (e^-TR/T1 - cos a)^2
-            const term_sq = Math.pow(exp_neg_TR_T1 - cos_alpha, 2);
-            const den_sqrt = Math.pow(1 - exp_neg_TR_T1, 2) - (exp_neg_2TR_T2 * term_sq);
+            // Denominator in the root: (1 - E1*cos a)^2 - E2^2 * (E1 - cos a)^2
+            const den_sqrt = Math.pow(1 - E1 * cos_alpha, 2) - E2_sq * Math.pow(E1 - cos_alpha, 2);
 
             if (den_sqrt <= 0) return 0; // Avoid NaN
-            const sqrt_val = Math.sqrt(num_sqrt / den_sqrt);
+            const sqrt_val = Math.sqrt((1 - E2_sq) / den_sqrt);
 
-            // Big bracket
-            // 1 - (e^TR/T1 - cos a) * sqrt(...)
-            const bracket = 1 - ((exp_pos_TR_T1 - cos_alpha) * sqrt_val);
+            // Bracket: 1 - (E1 - cos a) * sqrt(...)
+            const bracket = 1 - ((E1 - cos_alpha) * sqrt_val);
 
-            return Rho * tan_a_2 * bracket * exp_neg_TE_T2s;
+            return Rho * tan_a_2 * bracket * E_TE;
         }
     },
     'PSIF': {
@@ -158,6 +160,9 @@ const sequences = {
             let { T1, T2, Rho } = tissueP;
             if (T1 <= 0) T1 = 1;
             if (T2 <= 0) T2 = 1;
+
+            // tan(theta/2) has no limit at 180 degrees, but the signal goes to 0.
+            if (Theta >= 180) return 0;
 
             const alphaRad = Theta * Math.PI / 180;
             const tan_a_2 = Math.tan(alphaRad / 2);
@@ -286,6 +291,12 @@ let chartInstance = null;
 
 const tissueColors = ['#bb86fc', '#03dac6', '#cf6679', '#ffb74d', '#64b5f6'];
 
+function escapeHtml(str) {
+    return String(str).replace(/[&<>"']/g, (c) => ({
+        '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+    }[c]));
+}
+
 // --- Initialization ---
 function init() {
     // Setup Nav
@@ -350,7 +361,7 @@ function setSequence(seqId) {
     // Display citation and URL
     const citationDisplay = document.getElementById('citation-display');
     if (seq.url) {
-        citationDisplay.innerHTML = `${seq.citation || ''} <br> <a href="${seq.url}" target="_blank" style="color:var(--primary);text-decoration:none;">[View Source Equation]</a>`;
+        citationDisplay.innerHTML = `${seq.citation || ''} <br> <a href="${seq.url}" target="_blank" rel="noopener" style="color:var(--primary);text-decoration:none;">[View Source Equation]</a>`;
     } else {
         citationDisplay.textContent = seq.citation || '';
     }
@@ -359,7 +370,8 @@ function setSequence(seqId) {
     currentSeqParams = {};
     seq.params.forEach(pKey => {
         if (paramType[pKey] === 'seq') {
-            currentSeqParams[pKey] = paramDefinitions[pKey].default;
+            const seqDefault = seq.defaults ? seq.defaults[pKey] : undefined;
+            currentSeqParams[pKey] = seqDefault !== undefined ? seqDefault : paramDefinitions[pKey].default;
         }
     });
 
@@ -368,7 +380,6 @@ function setSequence(seqId) {
         window.MathJax.typesetPromise([document.getElementById('equation-display')]).catch((err) => console.log('MathJax error:', err));
     }
 
-    // Determine default X-Axis if current one is not valid for this sequence
     // Determine default X-Axis if current one is not valid for this sequence OR is a tissue param
     // We strictly want only seq params now.
     const isSeqParam = paramType[xAxisParam] === 'seq';
@@ -442,7 +453,6 @@ function buildControls() {
     xSelect.innerHTML = '';
 
     // --- X-Axis Select ---
-    // --- X-Axis Select ---
     // Allow ONLY sequence params
     seq.params.forEach(pKey => {
         if (paramType[pKey] === 'seq') {
@@ -501,7 +511,7 @@ function buildControls() {
             createSlider(card, pKey, tissue.params[pKey], (val) => {
                 tissue.params[pKey] = val;
                 updateChart();
-            }, true); // compact mode
+            }, true, `tissue${tissue.id}-`); // compact mode
         });
 
         tissueContainer.appendChild(card);
@@ -510,8 +520,13 @@ function buildControls() {
     updateUI();
 }
 
-function createSlider(container, pKey, initVal, onChange, isCompact) {
+function createSlider(container, pKey, initVal, onChange, isCompact, idPrefix = '') {
     const def = paramDefinitions[pKey];
+
+    // A preset value can be larger than the slider range (for example CSF T1).
+    if (pKey !== 'Theta' && pKey !== 'Rho' && initVal > def.max) {
+        def.max = Math.ceil(initVal * 1.5);
+    }
 
     const group = document.createElement('div');
     group.className = isCompact ? 'control-group compact' : 'control-group';
@@ -526,7 +541,7 @@ function createSlider(container, pKey, initVal, onChange, isCompact) {
     const valInput = document.createElement('input');
     valInput.type = 'number';
     valInput.className = 'param-input';
-    valInput.id = `input-${pKey}`; // Add ID
+    valInput.id = `${idPrefix}input-${pKey}`;
     valInput.value = initVal;
     valInput.min = def.min;
     valInput.max = def.max;
@@ -538,16 +553,19 @@ function createSlider(container, pKey, initVal, onChange, isCompact) {
     const slider = document.createElement('input');
     slider.type = 'range';
     slider.className = 'slider-input';
-    slider.id = `slider-${pKey}`; // Add ID
+    slider.id = `${idPrefix}slider-${pKey}`;
     slider.min = def.min;
     slider.max = def.max;
     slider.step = def.step;
     slider.value = initVal;
 
+    let lastVal = initVal;
+
     // Sync Slider -> Input
     slider.addEventListener('input', (e) => {
         const newVal = parseFloat(e.target.value);
         valInput.value = newVal;
+        lastVal = newVal;
 
         // Infinite Range Logic: Bi-directional scaling (except Theta and Rho)
         if (pKey !== 'Theta' && pKey !== 'Rho') {
@@ -582,6 +600,12 @@ function createSlider(container, pKey, initVal, onChange, isCompact) {
     valInput.addEventListener('change', (e) => {
         let newVal = parseFloat(e.target.value);
 
+        // Empty or invalid text: go back to the last good value
+        if (!Number.isFinite(newVal)) {
+            valInput.value = lastVal;
+            return;
+        }
+
         // Auto-expand max if input > max (except Theta and Rho)
         if (pKey !== 'Theta' && pKey !== 'Rho' && newVal > def.max) {
             const newMax = Math.ceil(newVal * 1.5);
@@ -597,6 +621,7 @@ function createSlider(container, pKey, initVal, onChange, isCompact) {
 
         valInput.value = newVal;
         slider.value = newVal;
+        lastVal = newVal;
         onChange(newVal);
     });
 
@@ -607,10 +632,12 @@ function createSlider(container, pKey, initVal, onChange, isCompact) {
 
 function addTissue() {
     if (tissues.length >= 5) return; // Limit to 5
-    const color = tissueColors[tissues.length % tissueColors.length];
+    // Use the first colour that no tissue has at this time
+    const usedColors = tissues.map(t => t.color);
+    const color = tissueColors.find(c => !usedColors.includes(c)) || tissueColors[tissues.length % tissueColors.length];
     tissues.push({
         id: nextTissueId++,
-        name: `Tissue ${tissues.length + 1}`,
+        name: `Tissue ${nextTissueId}`,
         params: { T1: 800, T2: 80, T2s: 40, Rho: 1.0 },
         color: color
     });
@@ -654,7 +681,7 @@ function updateChart() {
     const isSeqParam = paramType[xAxisParam] === 'seq';
 
     // Generate data points
-    const steps = 2048;
+    let steps = 2048;
 
     let plotMax = def.max;
     // User request: Use slider value as max plot value (except Theta)
@@ -665,6 +692,9 @@ function updateChart() {
     }
 
     const range = plotMax - def.min;
+
+    // ETL is a count of echoes: use integer values only
+    if (xAxisParam === 'ETL') steps = Math.max(1, Math.round(range));
 
     const datasets = [];
 
@@ -688,16 +718,20 @@ function updateChart() {
 
             let yVal = 0;
             // Dynamic Constraint: Signal is null if TE > TR (for relevant sequences)
+            // or if the sequence timing is not possible (seq.valid)
             if (sP.TR !== undefined && sP.TE !== undefined && sP.TE > sP.TR) {
+                yVal = null;
+            } else if (seq.valid && !seq.valid(sP)) {
                 yVal = null;
             } else {
                 yVal = seq.calc(sP, tP);
+                if (!Number.isFinite(yVal)) yVal = null;
             }
             points.push({ x: xVal, y: yVal });
             yValues.push(yVal);
         }
 
-        if (tIdx < 10) signalData.push({ xs: points.map(p => p.x), ys: yValues, name: tissue.name }); // Store up to 10 for logic (limit is 5 anyway)
+        if (tIdx < 10) signalData.push({ xs: points.map(p => p.x), ys: yValues, name: tissue.name, color: tissue.color }); // Store up to 10 for logic (limit is 5 anyway)
 
         datasets.push({
             label: tissue.name,
@@ -728,8 +762,9 @@ function updateChart() {
                 const s1 = t1.ys;
                 const s2 = t2.ys;
 
-                let pMaxDiff = 0, pMaxDiffX = 0;
-                let pMaxRatio = 1, pMaxRatioX = 0;
+                // X positions stay null if no maximum is found
+                let pMaxDiff = 0, pMaxDiffX = null;
+                let pMaxRatio = 1, pMaxRatioX = null;
 
                 for (let k = 0; k < s1.length; k++) {
                     const v1 = s1[k];
@@ -780,48 +815,58 @@ function updateChart() {
         if (!isFinite(minY)) minY = 0;
         if (!isFinite(maxY)) maxY = 1;
 
+        const hasValidPoints = allYs.length > 0;
+        if (!hasValidPoints) {
+            html = '<span style="color:#aaa">No valid signal for these settings. Check that TE &le; TR and that the echo train fits between 0 and TR.</span>';
+        }
+
+        const unit = paramDefinitions[xAxisParam].unit || '';
+        const unitStr = unit ? ` ${unit}` : '';
+        const atStr = (x) => (x === null ? 'n/a' : `@ ${Math.round(x)}${unitStr}`);
+
         pairwiseResults.forEach(res => {
-            const unit = paramDefinitions[xAxisParam].unit || '';
-            const unitStr = unit ? ` ${unit}` : '';
+            if (!hasValidPoints) return;
 
             // Add UI Block
             html += `
                 <div class="stat-item" style="border-left: 3px solid ${res.color}; padding-left: 0.5rem;">
-                    <span class="stat-label" style="color: #fff; font-weight:700;">${res.name}</span>
+                    <span class="stat-label" style="color: #fff; font-weight:700;">${escapeHtml(res.name)}</span>
                     <div style="font-size: 0.9rem; color: #ddd;">
                         Max Diff: <span style="color: white; font-weight:600;">${res.diff.toFixed(3)}</span> 
-                        <span style="font-size:0.7em; opacity:0.7">@ ${Math.round(res.diffX)}${unitStr}</span>
+                        <span style="font-size:0.7em; opacity:0.7">${atStr(res.diffX)}</span>
                     </div>
                     <div style="font-size: 0.9rem; color: #ffeb3b;">
                         Max Ratio: <span style="font-weight:600;">${res.ratio.toFixed(2)}</span>
-                        <span style="font-size:0.7em; opacity:0.7">@ ${Math.round(res.ratioX)}${unitStr}</span>
+                        <span style="font-size:0.7em; opacity:0.7">${atStr(res.ratioX)}</span>
                     </div>
                 </div>
             `;
 
-            // Add Lines (Diff only? Ratio often overlaps or is similar. Let's add Diff as solid dash, Ratio as dotted?)
-            // Adding ALL lines might be too much. Let's add Diff lines in white (dashed)
-            // And Ratio lines in yellow (dotted)
+            // Marker lines: Max Diff in white (dashed), Max Ratio in yellow (dotted).
+            // No line if no maximum was found.
+            if (res.diffX !== null) {
+                datasets.push({
+                    label: `Max Diff (${res.name})`,
+                    data: [{ x: res.diffX, y: minY }, { x: res.diffX, y: maxY }],
+                    borderColor: 'rgba(255, 255, 255, 0.7)',
+                    borderDash: [5, 5],
+                    borderWidth: 1,
+                    pointRadius: 0,
+                    fill: false
+                });
+            }
 
-            datasets.push({
-                label: `Max Diff (${res.name})`,
-                data: [{ x: res.diffX, y: minY }, { x: res.diffX, y: maxY }],
-                borderColor: 'rgba(255, 255, 255, 0.7)',
-                borderDash: [5, 5],
-                borderWidth: 1,
-                pointRadius: 0,
-                fill: false
-            });
-
-            datasets.push({
-                label: `Max Ratio (${res.name})`,
-                data: [{ x: res.ratioX, y: minY }, { x: res.ratioX, y: maxY }],
-                borderColor: 'rgba(255, 235, 59, 0.7)', // Yellowish
-                borderDash: [2, 4],
-                borderWidth: 1,
-                pointRadius: 0,
-                fill: false
-            });
+            if (res.ratioX !== null) {
+                datasets.push({
+                    label: `Max Ratio (${res.name})`,
+                    data: [{ x: res.ratioX, y: minY }, { x: res.ratioX, y: maxY }],
+                    borderColor: 'rgba(255, 235, 59, 0.7)', // Yellowish
+                    borderDash: [2, 4],
+                    borderWidth: 1,
+                    pointRadius: 0,
+                    fill: false
+                });
+            }
         });
 
         contrastBox.innerHTML = html;

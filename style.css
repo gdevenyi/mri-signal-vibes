@@ -3,6 +3,7 @@
     --bg-panel: #1e1e1e;
     --bg-sidebar: #181818;
     --primary: #bb86fc;
+    --primary-dark: #7e57c2;
     --secondary: #03dac6;
     --error: #cf6679;
     --text-main: #e0e0e0;
@@ -334,6 +335,7 @@ body {
 .slider-input {
     width: 100%;
     -webkit-appearance: none;
+    appearance: none;
     height: 4px;
     background: #444;
     border-radius: 2px;
@@ -351,6 +353,21 @@ body {
 }
 
 .slider-input::-webkit-slider-thumb:hover {
+    background: var(--primary);
+    transform: scale(1.2);
+}
+
+.slider-input::-moz-range-thumb {
+    width: 14px;
+    height: 14px;
+    border: none;
+    border-radius: 50%;
+    background: var(--text-muted);
+    cursor: pointer;
+    transition: transform 0.1s;
+}
+
+.slider-input::-moz-range-thumb:hover {
     background: var(--primary);
     transform: scale(1.2);
 }

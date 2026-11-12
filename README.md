@@ -15,7 +15,7 @@ Comprehensive support for common MRI sequences with mathematically accurate sign
   - Echo Train Length (ETL) parameter
   - Summation over all echoes with proper T1 and T2 weighting
 - **Spoiled Gradient Echo (SPGR / FLASH)**: Steady-state gradient echo with T2\* decay
-- **FISP (Steady State)**: Balanced gradient echo with complex steady-state behavior
+- **FISP (Steady State)**: SSFP-FID gradient echo (not balanced) with T2\* decay
 - **PSIF (Reverse FISP / SSFP-Echo)**: Reverse steady-state free precession
 - **Balanced SSFP (TrueFISP / FIESTA)**: On-resonance balanced steady-state
 - **Inversion Recovery (IR)**: Inversion pulse with variable TI
@@ -89,6 +89,14 @@ $$S = \frac{\rho}{ETL} \sum_{k=1}^{ETL} \left[1 - 2\exp\left(-\frac{TR-TE_k/2}{T
 
 Where $TE_k = TE_{eff} + (k - k_c) \cdot ESP$ and $k_c = \frac{ETL + 1}{2}$ for symmetric echo trains.
 
+The simulator shows no signal when the echo train does not fit in the repetition: the first echo must be after the excitation ($TE_1 > 0$) and the last echo must not be after $TR$ ($TE_{ETL} \le TR$).
+
+The FISP equation image on MRIQuestions.com contains two errors (the sign of an exponent and a missing $\cos\theta$) that give negative signals. The simulator uses the SSFP-FID solution from Hänicke & Vogel (2003), which becomes the SPGR equation when $T_2 \to 0$:
+
+$$S = \rho \tan\left(\frac{\theta}{2}\right) \left[1 - (E_1 - \cos\theta) \sqrt{\frac{1 - E_2^2}{(1 - E_1\cos\theta)^2 - E_2^2 (E_1 - \cos\theta)^2}}\right] e^{-TE/T_2^*}$$
+
+Where $E_1 = e^{-TR/T_1}$ and $E_2 = e^{-TR/T_2}$.
+
 ## References
 
 ### Primary Literature
@@ -102,6 +110,7 @@ Where $TE_k = TE_{eff} + (k - k_c) \cdot ESP$ and $k_c = \frac{ETL + 1}{2}$ for 
 - PSIF vs FISP: https://mriquestions.com/psif-vs-fisp.html
 - Spoiled GRE: https://mriquestions.com/spoiled-gre-parameters.html
 - FISP Parameters: https://mriquestions.com/grassfisp-parameters.html
+- Hänicke W, Vogel HU. An analytical solution for the SSFP signal in MRI. Magn Reson Med 2003;49:771-775.
 - Inversion Recovery: https://mriquestions.com/choice-of-ir-parameters.html
 - Balanced SSFP: https://mriquestions.com/true-fispfiesta.html
 
