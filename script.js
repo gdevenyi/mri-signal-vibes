@@ -155,7 +155,7 @@ const sequences = {
         url: 'https://mriquestions.com/psif-vs-fisp.html',
         equationStr: '$$ S = \\rho \\tan(\\frac{\\theta}{2}) \\left[ 1 - (1 - e^{-TR/T1} \\cos \\theta) \\sqrt{\\frac{1 - e^{-2TR/T2}}{(1 - e^{-TR/T1} \\cos \\theta)^2 - e^{-2TR/T2}(e^{-TR/T1} - \\cos \\theta)^2}} \\right] e^{-TE/T2} $$',
         calc: (seqP, tissueP) => {
-            // PSIF Equation (User Provided)
+            // PSIF equation. Agrees with the equation image on the cited page.
             const { TR, TE, Theta } = seqP;
             let { T1, T2, Rho } = tissueP;
             if (T1 <= 0) T1 = 1;
@@ -543,7 +543,10 @@ function createSlider(container, pKey, initVal, onChange, isCompact, idPrefix = 
     valInput.className = 'param-input';
     valInput.id = `${idPrefix}input-${pKey}`;
     valInput.value = initVal;
-    valInput.min = def.min;
+    // The step grid starts at a multiple of the step (0 for TR, not 1), so that
+    // a typed value such as 500 does not move to 501. The handlers apply def.min.
+    const gridMin = Math.floor(def.min / def.step) * def.step;
+    valInput.min = gridMin;
     valInput.max = def.max;
     valInput.step = def.step;
 
@@ -554,7 +557,7 @@ function createSlider(container, pKey, initVal, onChange, isCompact, idPrefix = 
     slider.type = 'range';
     slider.className = 'slider-input';
     slider.id = `${idPrefix}slider-${pKey}`;
-    slider.min = def.min;
+    slider.min = gridMin;
     slider.max = def.max;
     slider.step = def.step;
     slider.value = initVal;
@@ -563,7 +566,7 @@ function createSlider(container, pKey, initVal, onChange, isCompact, idPrefix = 
 
     // Sync Slider -> Input
     slider.addEventListener('input', (e) => {
-        const newVal = parseFloat(e.target.value);
+        const newVal = Math.max(parseFloat(e.target.value), def.min);
         valInput.value = newVal;
         lastVal = newVal;
 

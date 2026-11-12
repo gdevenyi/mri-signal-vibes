@@ -41,6 +41,8 @@ body {
     display: flex;
     flex-direction: column;
     padding: 1.5rem;
+    overflow-y: auto;
+    flex-shrink: 0;
 }
 
 .logo h1 {
@@ -86,6 +88,18 @@ body {
     font-weight: 600;
 }
 
+.github-link {
+    margin: 1rem 0 0.5rem;
+}
+
+.github-link a {
+    color: var(--text-muted);
+}
+
+.github-link a:hover {
+    color: var(--primary);
+}
+
 .info-box {
     margin-top: auto;
     font-size: 0.75rem;
@@ -113,6 +127,12 @@ body {
     align-items: center;
     border-bottom: 1px solid var(--border);
     padding-bottom: 1rem;
+}
+
+.top-bar,
+.equation-panel,
+.reference-panel {
+    flex-shrink: 0;
 }
 
 .top-bar h2 {
@@ -165,7 +185,8 @@ body {
     display: grid;
     grid-template-columns: 320px 1fr;
     gap: 1.5rem;
-    flex: 1;
+    /* Do not shrink below 600px in a short window: the page scrolls instead */
+    flex: 1 0 600px;
     min-height: 0;
 }
 
@@ -450,7 +471,12 @@ body {
 @media (max-width: 900px) {
     .content-grid {
         grid-template-columns: 1fr;
-        grid-template-rows: auto 400px;
+        grid-template-rows: auto auto;
+        flex-basis: auto;
+    }
+
+    .tissue-panel {
+        max-height: 400px;
     }
 }
 
