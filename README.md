@@ -8,6 +8,7 @@ A web-interactive tool designed to simulate MRI signal intensity and contrast fo
 
 Comprehensive support for common MRI sequences with mathematically accurate signal equations:
 
+- **Saturation Recovery (SR)**: T1 recovery after a 90° pulse, with T2 decay
 - **Spin Echo (SE)**: Full spin echo formulation with T1 recovery and T2 decay
 - **Fast Spin Echo (FSE / TSE)**: Complete echo train formulation with:
   - Individual echo timing calculation (TE_k = TE_eff + (k - k_c) × ESP)
@@ -17,8 +18,11 @@ Comprehensive support for common MRI sequences with mathematically accurate sign
 - **Spoiled Gradient Echo (SPGR / FLASH)**: Steady-state gradient echo with T2\* decay
 - **FISP (Steady State)**: SSFP-FID gradient echo (not balanced) with T2\* decay
 - **PSIF (Reverse FISP / SSFP-Echo)**: Reverse steady-state free precession
+- **DESS (Dual Echo Steady State)**: Root sum of squares of the FISP and PSIF signals
 - **Balanced SSFP (TrueFISP / FIESTA)**: On-resonance balanced steady-state
-- **Inversion Recovery (IR)**: Inversion pulse with variable TI
+- **Inversion Recovery (IR)**: Inversion pulse with variable TI, with:
+  - A **Magnitude** option that shows |S|, as in a magnitude image
+  - A **Null** button on each tissue that sets TI to the null point of that tissue (as in STIR and FLAIR)
 
 ### Interactive Visualization
 
@@ -81,6 +85,18 @@ Simply open `index.html` in a modern web browser. No build process or server req
 5. Change the X-axis parameter to explore different relationships
 6. Observe contrast metrics and optimal parameter values
 
+## Development
+
+The signal equations are in `sequences.js`, which has no DOM code. The user interface is in `script.js`.
+
+Run the tests of the signal equations with Node.js (no packages are necessary):
+
+```sh
+node --test
+```
+
+Most tests are limit checks. For example, FISP must become SPGR when $T_2 \to 0$, and FSE with one echo must be equal to SE.
+
 ## Mathematical Formulations
 
 All sequences use validated mathematical models from MRI physics literature. The FSE/TSE implementation uses the full spin echo formulation with echo train summation:
@@ -96,6 +112,12 @@ The FISP equation image on MRIQuestions.com contains two errors (the sign of an 
 $$S = \rho \tan\left(\frac{\theta}{2}\right) \left[1 - (E_1 - \cos\theta) \sqrt{\frac{1 - E_2^2}{(1 - E_1\cos\theta)^2 - E_2^2 (E_1 - \cos\theta)^2}}\right] e^{-TE/T_2^*}$$
 
 Where $E_1 = e^{-TR/T_1}$ and $E_2 = e^{-TR/T_2}$.
+
+Inversion Recovery shows no signal when $TI > TR$. The **Null** button uses the root of the IR equation:
+
+$$TI_{null} = T_1 \ln\left(\frac{2}{1 + 2e^{-(TR - TE/2)/T_1} - e^{-TR/T_1}}\right)$$
+
+This becomes $T_1 \ln 2$ when $TR$ is long.
 
 ## References
 

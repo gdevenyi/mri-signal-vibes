@@ -22,11 +22,13 @@
                 <p>Vibe-Coded MRI Signal Intensity Simulator</p>
             </div>
             <nav class="sequence-nav">
+                <button class="nav-btn" data-seq="SR">Saturation Recovery (SR)</button>
                 <button class="nav-btn active" data-seq="SE">Spin Echo (SE)</button>
                 <button class="nav-btn" data-seq="FSE">Fast Spin Echo (FSE)</button>
                 <button class="nav-btn" data-seq="SPGR">Spoiled GRE (SPGR)</button>
                 <button class="nav-btn" data-seq="FISP">FISP (Steady State)</button>
                 <button class="nav-btn" data-seq="PSIF">PSIF (Reverse FISP)</button>
+                <button class="nav-btn" data-seq="DESS">DESS (Dual Echo)</button>
                 <button class="nav-btn" data-seq="bSSFP">Balanced SSFP</button>
                 <button class="nav-btn" data-seq="IR">Inversion Recovery (IR)</button>
 
@@ -50,6 +52,9 @@
                     <div class="control-group-inline">
                         <label for="x-axis-select">X-Axis:</label>
                         <select id="x-axis-select"></select>
+                    </div>
+                    <div class="control-group-inline" id="magnitude-container" style="display:none;">
+                        <label title="Show the magnitude of the signal, as in a magnitude image"><input type="checkbox" id="magnitude-chk"> Magnitude</label>
                     </div>
                     <div class="separator-vertical"></div>
                     <div class="control-group-inline">
@@ -208,6 +213,7 @@
             </div>
         </main>
     </div>
+    <script src="sequences.js"></script>
     <script src="script.js"></script>
 </body>
 

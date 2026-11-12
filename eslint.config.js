@@ -1,24 +1,47 @@
+const browserGlobals = {
+  window: "readonly",
+  document: "readonly",
+  console: "readonly",
+  Math: "readonly",
+  JSON: "readonly",
+  parseFloat: "readonly",
+  MathJax: "readonly",
+  Chart: "readonly",
+  setTimeout: "readonly"
+};
+
+const rules = {
+  "no-unused-vars": "warn",
+  "no-undef": "error"
+};
+
 export default [
   {
-    files: ["**/*.js"],
+    files: ["script.js"],
     languageOptions: {
       ecmaVersion: "latest",
       sourceType: "script",
-      globals: {
-        window: "readonly",
-        document: "readonly",
-        console: "readonly",
-        Math: "readonly",
-        JSON: "readonly",
-        parseFloat: "readonly",
-        MathJax: "readonly",
-        Chart: "readonly",
-        setTimeout: "readonly"
-      }
+      // `sequences` comes from sequences.js
+      globals: { ...browserGlobals, sequences: "readonly" }
     },
-    rules: {
-      "no-unused-vars": "warn",
-      "no-undef": "error"
-    }
+    rules
+  },
+  {
+    files: ["sequences.js"],
+    languageOptions: {
+      ecmaVersion: "latest",
+      sourceType: "script",
+      // `module` is only there in Node.js (tests)
+      globals: { ...browserGlobals, module: "readonly" }
+    },
+    rules
+  },
+  {
+    files: ["test/**/*.js"],
+    languageOptions: {
+      ecmaVersion: "latest",
+      sourceType: "commonjs"
+    },
+    rules
   }
 ];
