@@ -571,3 +571,111 @@ body {
 .preset-load-btn:hover {
     background-color: var(--primary);
 }
+/* Literature reference table */
+.lit-heading {
+    margin-top: 2.5rem;
+}
+
+.ref-filters {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.75rem 1.5rem;
+    margin-bottom: 1rem;
+    font-size: 0.9rem;
+}
+
+.ref-filters select {
+    background-color: var(--input-bg);
+    color: var(--text-main);
+    border: 1px solid var(--border);
+    padding: 0.3rem 0.6rem;
+    border-radius: 4px;
+    font-family: inherit;
+    font-size: 0.9rem;
+}
+
+.lit-search {
+    width: 140px;
+    padding: 0.3rem 0.6rem;
+    font-size: 0.9rem;
+}
+
+.lit-count {
+    color: var(--text-muted);
+    margin-left: auto;
+}
+
+.ref-table-wrap {
+    overflow-x: auto;
+}
+
+.lit-table {
+    font-size: 0.85rem;
+}
+
+.lit-table th,
+.lit-table td {
+    padding: 0.5rem 0.6rem;
+    vertical-align: top;
+}
+
+.lit-nowrap {
+    white-space: nowrap;
+}
+
+.lit-small {
+    font-size: 0.75rem;
+    color: var(--text-muted);
+}
+
+.lit-details {
+    min-width: 220px;
+}
+
+.lit-table a {
+    color: var(--secondary);
+    text-decoration: none;
+}
+
+.lit-table a:hover {
+    text-decoration: underline;
+}
+
+.lit-badge {
+    display: inline-block;
+    margin-bottom: 0.2rem;
+    padding: 0.05rem 0.4rem;
+    border: 1px solid var(--error);
+    border-radius: 4px;
+    color: var(--error);
+    font-weight: 600;
+}
+
+.lit-table .preset-load-btn {
+    margin-top: 0;
+    white-space: nowrap;
+}
+
+.lit-badge {
+    margin-right: 0.3rem;
+}
+
+.lit-badge-muted {
+    border-color: var(--text-muted);
+    color: var(--text-muted);
+}
+
+.lit-details summary {
+    cursor: pointer;
+    color: var(--secondary);
+    margin-top: 0.2rem;
+}
+
+.lit-details blockquote {
+    margin-top: 0.3rem;
+    padding-left: 0.5rem;
+    border-left: 2px solid var(--border);
+    font-style: italic;
+    overflow-wrap: anywhere;
+}

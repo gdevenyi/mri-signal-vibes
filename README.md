@@ -40,7 +40,24 @@ Pre-configured tissue presets at multiple field strengths:
 - **3.0T**: White Matter, Gray Matter, CSF
 - **7.0T**: White Matter, Gray Matter, CSF
 
-Each tissue includes realistic T1, T2, T2\*, and proton density (ρ) values.
+These presets are rounded, approximate values. They are not from one source.
+
+### Literature Reference Values
+
+The **Reference Values** page also has a table of published brain relaxation values, with a reference for each row:
+
+- **Species**: human, mouse and rat
+- **Condition**: in vivo and ex vivo (post-mortem, fixed and unfixed)
+- **Field strength**: 1.5 T to 17.6 T
+- **Values**: T1, T2, T2\* and proton density, as given in the source
+- **Filters**: species, condition, field strength and tissue name
+- **Add to Sim**: adds the row to the simulator as a tissue. If the source does not give a value, the simulator uses a default value and the tissue name says so.
+
+Each row is one measurement from one source. Rows are not averaged, and different sources can disagree. For ex vivo tissue, the fixation, the temperature and contrast agents change the values significantly, so the table shows them. Rows with a contrast agent in the sample have a "Contrast agent" mark.
+
+The data are in `reference-data.js`. Each record has the text of the source that contains the values (`quote`). Records with `checked: false` (a "Read once" mark in the table) were read one time in the publisher full text, and a second check against a fresh copy of the source was not possible.
+
+The table is not complete. Some combinations have no row because no value was found or because the paper was not available to read: for example human in vivo above 9.4 T, mouse and rat at 14.1 T, and mouse at clinical field strengths.
 
 ### Parameter Control
 
@@ -87,9 +104,9 @@ Simply open `index.html` in a modern web browser. No build process or server req
 
 ## Development
 
-The signal equations are in `sequences.js`, which has no DOM code. The user interface is in `script.js`.
+The signal equations are in `sequences.js` and the literature reference values are in `reference-data.js`. These files have no DOM code. The user interface is in `script.js`.
 
-Run the tests of the signal equations with Node.js (no packages are necessary):
+Run the tests of the signal equations and of the reference data with Node.js (no packages are necessary):
 
 ```sh
 node --test

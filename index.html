@@ -112,10 +112,10 @@
                 <p id="citation-display" class="citation-text"></p>
             </div>
             <div id="reference-view" class="reference-panel" style="display: none;">
-                <h3>Approximate MRI Relaxation Times (Human Brain)</h3>
+                <h3>Approximate Presets (Human Brain, In Vivo)</h3>
                 <p class="citation-text" style="text-align: left; margin-bottom: 1rem; border:none; padding:0;">
-                    Values are approximate averages for healthy adults (37°C) from literature (e.g. Stanisz 2005,
-                    Wansapura 1999, Rooney 2007).
+                    These presets are rounded, approximate values for healthy adults. They are not from one source.
+                    For values with a reference, see the literature table below.
                     <strong>Note:</strong> Tissues vary significantly by age, region, and pathology.
                 </p>
                 <table class="ref-table">
@@ -210,10 +210,47 @@
                         </tr>
                     </tbody>
                 </table>
+
+                <h3 class="lit-heading">Literature Values (Brain)</h3>
+                <p class="citation-text" style="text-align: left; margin-bottom: 1rem; border:none; padding:0;">
+                    Each row is one published measurement, with its reference. Values are mean ± SD as given in the
+                    source. Rows from different sources are not averaged, and they can disagree: the result depends
+                    on the method, the region, the age and, for ex vivo tissue, on the fixation, the temperature and
+                    contrast agents. A dash shows that the source does not give the value.
+                </p>
+                <div class="ref-filters">
+                    <label>Species: <select id="lit-species"></select></label>
+                    <label>Condition: <select id="lit-condition"></select></label>
+                    <label>Field: <select id="lit-field"></select></label>
+                    <label>Tissue: <input type="search" id="lit-tissue" class="small-input lit-search"
+                            placeholder="e.g. cortex"></label>
+                    <span id="lit-count" class="lit-count"></span>
+                </div>
+                <div class="ref-table-wrap">
+                    <table class="ref-table lit-table">
+                        <thead>
+                            <tr>
+                                <th>Species</th>
+                                <th>Condition</th>
+                                <th>Field</th>
+                                <th>Tissue</th>
+                                <th>T1 (ms)</th>
+                                <th>T2 (ms)</th>
+                                <th>T2* (ms)</th>
+                                <th>PD (rel)</th>
+                                <th>Details</th>
+                                <th>Reference</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody id="lit-tbody"></tbody>
+                    </table>
+                </div>
             </div>
         </main>
     </div>
     <script src="sequences.js"></script>
+    <script src="reference-data.js"></script>
     <script src="script.js"></script>
 </body>
 

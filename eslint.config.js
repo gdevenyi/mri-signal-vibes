@@ -21,13 +21,13 @@ export default [
     languageOptions: {
       ecmaVersion: "latest",
       sourceType: "script",
-      // `sequences` comes from sequences.js
-      globals: { ...browserGlobals, sequences: "readonly" }
+      // `sequences` comes from sequences.js, `referenceData` from reference-data.js
+      globals: { ...browserGlobals, sequences: "readonly", referenceData: "readonly" }
     },
     rules
   },
   {
-    files: ["sequences.js"],
+    files: ["sequences.js", "reference-data.js"],
     languageOptions: {
       ecmaVersion: "latest",
       sourceType: "script",

@@ -55,7 +55,8 @@ const REFERENCE_PRESETS = {
 let currentSeqParams = {};
 // Initialize with 1.5T Default (Deep Copy to identify valid objects)
 let tissues = JSON.parse(JSON.stringify(REFERENCE_PRESETS['1.5T'])).map((t, i) => ({ ...t, id: i + 1 }));
-let nextTissueId = 4;
+let nextTissueId = tissues.length + 1;
+const MAX_TISSUES = 5;
 let xAxisParam = 'TR'; // Default X-Axis
 let yAxisAuto = true;
 let magnitudeMode = false; // Show |S| for sequences with a signed signal
@@ -116,8 +117,207 @@ function init() {
         });
     });
 
+    initReferenceTable();
+
     setSequence('SE');
     updateView();
+}
+
+// --- Literature reference table (data in reference-data.js) ---
+
+function initReferenceTable() {
+    const fill = (id, values, label) => {
+        const sel = document.getElementById(id);
+        sel.innerHTML = '';
+        [['', 'All'], ...values.map(v => [String(v), label(v)])].forEach(([value, text]) => {
+            const opt = document.createElement('option');
+            opt.value = value;
+            opt.textContent = text;
+            sel.appendChild(opt);
+        });
+        sel.addEventListener('change', renderReferenceTable);
+    };
+    const unique = (key) => [...new Set(referenceData.map(r => r[key]))];
+    const capitalize = (s) => s.charAt(0).toUpperCase() + s.slice(1);
+
+    fill('lit-species', unique('species').sort(), capitalize);
+    fill('lit-condition', unique('condition').sort().reverse(), capitalize);
+    fill('lit-field', unique('field_T').sort((a, b) => a - b), (f) => `${f} T`);
+    document.getElementById('lit-tissue').addEventListener('input', renderReferenceTable);
+
+    renderReferenceTable();
+}
+
+function formatRefValue(value, sd) {
+    if (value === null || value === undefined) return '—';
+    return (sd === null || sd === undefined) ? `${value}` : `${value} ± ${sd}`;
+}
+
+function renderReferenceTable() {
+    const species = document.getElementById('lit-species').value;
+    const condition = document.getElementById('lit-condition').value;
+    const field = document.getElementById('lit-field').value;
+    const tissueText = document.getElementById('lit-tissue').value.trim().toLowerCase();
+
+    const rows = referenceData.filter(r =>
+        (!species || r.species === species) &&
+        (!condition || r.condition === condition) &&
+        (!field || String(r.field_T) === field) &&
+        (!tissueText || `${r.tissue} ${r.region_detail || ''}`.toLowerCase().includes(tissueText))
+    ).sort((a, b) =>
+        a.species.localeCompare(b.species) ||
+        b.condition.localeCompare(a.condition) ||
+        a.field_T - b.field_T ||
+        a.tissue.localeCompare(b.tissue) ||
+        a.citation.localeCompare(b.citation)
+    );
+
+    document.getElementById('lit-count').textContent = `${rows.length} of ${referenceData.length} rows`;
+
+    // All text goes in with textContent, so no escape is necessary
+    const cell = (tr, text, className) => {
+        const td = document.createElement('td');
+        td.textContent = text;
+        if (className) td.className = className;
+        tr.appendChild(td);
+        return td;
+    };
+
+    const tbody = document.getElementById('lit-tbody');
+    tbody.innerHTML = '';
+    if (rows.length === 0) {
+        const tr = document.createElement('tr');
+        const td = cell(tr, 'No rows for these filters. An empty result can be correct: for some species, conditions and field strengths, no published value was found.', 'lit-small');
+        td.colSpan = 11;
+        tbody.appendChild(tr);
+    }
+    rows.forEach(r => {
+        const tr = document.createElement('tr');
+        cell(tr, r.species.charAt(0).toUpperCase() + r.species.slice(1));
+        cell(tr, r.condition);
+        cell(tr, `${r.field_T} T`, 'lit-nowrap');
+
+        const tissueTd = cell(tr, r.tissue);
+        if (r.region_detail) {
+            const detail = document.createElement('div');
+            detail.className = 'lit-small';
+            detail.textContent = r.region_detail;
+            tissueTd.appendChild(detail);
+        }
+
+        cell(tr, formatRefValue(r.T1_ms, r.T1_sd), 'lit-nowrap');
+        cell(tr, formatRefValue(r.T2_ms, r.T2_sd), 'lit-nowrap');
+        cell(tr, formatRefValue(r.T2s_ms, r.T2s_sd), 'lit-nowrap');
+        cell(tr, formatRefValue(r.PD, null), 'lit-nowrap');
+
+        const detailsTd = cell(tr, '', 'lit-small lit-details');
+        if (r.gd_doped) {
+            const badge = document.createElement('span');
+            badge.className = 'lit-badge';
+            badge.textContent = 'Contrast agent';
+            badge.title = 'A contrast agent was in the sample. It shortens the relaxation times.';
+            detailsTd.appendChild(badge);
+        }
+        if (!r.checked) {
+            const badge = document.createElement('span');
+            badge.className = 'lit-badge lit-badge-muted';
+            badge.textContent = 'Read once';
+            badge.title = 'The values were read one time in the full text. A second check against a fresh copy of the source was not possible.';
+            detailsTd.appendChild(badge);
+        }
+        if (r.converted_from_rate) {
+            const badge = document.createElement('span');
+            badge.className = 'lit-badge lit-badge-muted';
+            badge.textContent = 'From rate';
+            badge.title = 'The source gives a relaxation rate (R1, R2 or R2*). The time is 1/rate.';
+            detailsTd.appendChild(badge);
+        }
+        [r.subjects, r.method, r.temperature, r.fixation].filter(Boolean).forEach(text => {
+            const line = document.createElement('div');
+            line.textContent = text;
+            detailsTd.appendChild(line);
+        });
+        // Notes and the source quote are long, so they are in a collapsed block
+        const more = document.createElement('details');
+        const summary = document.createElement('summary');
+        summary.textContent = 'Notes and source quote';
+        more.appendChild(summary);
+        if (r.notes) {
+            const note = document.createElement('div');
+            note.textContent = r.notes;
+            more.appendChild(note);
+        }
+        const quote = document.createElement('blockquote');
+        quote.textContent = `${r.quote} (${r.read_from})`;
+        more.appendChild(quote);
+        detailsTd.appendChild(more);
+
+        const refTd = cell(tr, '', 'lit-small');
+        const url = r.doi ? `https://doi.org/${r.doi}` : (r.pmid ? `https://pubmed.ncbi.nlm.nih.gov/${r.pmid}/` : null);
+        if (url) {
+            const link = document.createElement('a');
+            link.href = url;
+            link.target = '_blank';
+            link.rel = 'noopener';
+            link.textContent = r.citation;
+            refTd.appendChild(link);
+        } else {
+            refTd.textContent = r.citation;
+        }
+
+        const actionTd = cell(tr, '');
+        const btn = document.createElement('button');
+        btn.className = 'preset-load-btn';
+        btn.textContent = 'Add to Sim';
+        const missing = referenceMissingParams(r);
+        btn.title = missing.length
+            ? `Add this tissue to the simulator. The source does not give ${missing.join(', ')}: the simulator uses a default value.`
+            : 'Add this tissue to the simulator';
+        btn.addEventListener('click', () => {
+            const added = addReferenceTissue(r);
+            btn.textContent = added ? 'Added' : `Sim is full (${MAX_TISSUES})`;
+            setTimeout(() => { btn.textContent = 'Add to Sim'; }, 1500);
+        });
+        actionTd.appendChild(btn);
+
+        tbody.appendChild(tr);
+    });
+}
+
+// Names of the simulator parameters that a reference row does not give
+function referenceMissingParams(r) {
+    const missing = [];
+    if (r.T1_ms === null) missing.push('T1');
+    if (r.T2_ms === null) missing.push('T2');
+    if (r.T2s_ms === null) missing.push('T2*');
+    if (r.PD === null) missing.push('PD');
+    return missing;
+}
+
+// Add one reference row to the simulator as a tissue. Returns false if the
+// simulator is full.
+function addReferenceTissue(r) {
+    if (tissues.length >= MAX_TISSUES) return false;
+
+    const params = {
+        T1: r.T1_ms !== null ? r.T1_ms : paramDefinitions.T1.default,
+        T2: r.T2_ms !== null ? r.T2_ms : paramDefinitions.T2.default,
+        T2s: r.T2s_ms !== null ? r.T2s_ms : paramDefinitions.T2s.default,
+        Rho: (r.PD !== null && r.PD > 0 && r.PD <= 1) ? r.PD : paramDefinitions.Rho.default
+    };
+    // A default T2* must not be longer than a T2 from the source
+    if (r.T2s_ms === null && params.T2s > params.T2) params.T2s = params.T2;
+
+    const missing = referenceMissingParams(r);
+    const usedColors = tissues.map(t => t.color);
+    tissues.push({
+        id: nextTissueId++,
+        name: `${r.tissue}, ${r.species} ${r.condition} ${r.field_T}T` + (missing.length ? ` (default ${missing.join(', ')})` : ''),
+        params: params,
+        color: tissueColors.find(c => !usedColors.includes(c)) || tissueColors[tissues.length % tissueColors.length]
+    });
+    buildControls();
+    return true;
 }
 
 // --- Core Logic ---
@@ -180,7 +380,7 @@ window.loadPreset = function (strength) {
 
     // Replace tissues with deep copy of preset
     tissues = JSON.parse(JSON.stringify(REFERENCE_PRESETS[strength])).map((t, i) => ({ ...t, id: i + 1 }));
-    nextTissueId = 4;
+    nextTissueId = tissues.length + 1;
 
     // Switch back to simulator
     currentMode = 'sim';
@@ -435,7 +635,7 @@ function createSlider(container, pKey, initVal, onChange, isCompact, idPrefix = 
 }
 
 function addTissue() {
-    if (tissues.length >= 5) return; // Limit to 5
+    if (tissues.length >= MAX_TISSUES) return;
     // Use the first colour that no tissue has at this time
     const usedColors = tissues.map(t => t.color);
     const color = tissueColors.find(c => !usedColors.includes(c)) || tissueColors[tissues.length % tissueColors.length];
