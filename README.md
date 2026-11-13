@@ -87,7 +87,8 @@ The table is not complete. Some combinations have no row because no value was fo
 
 - TR (Repetition Time): 1-5000 ms
 - TE (Echo Time): 1-300 ms
-- TI, TI1, TI2 (Inversion Times): 0-5000 ms
+- TI (Inversion Time): 0-3000 ms
+- TI1, TI2 (Inversion Times, DIR and MP2RAGE): 0-5000 ms
 - ETL (Echo Train Length): 1-32 echoes
 - ESP (Echo Spacing): 1-100 ms
 - N (Readouts per train, MPRAGE and MP2RAGE): 1-256
@@ -95,7 +96,7 @@ The table is not complete. Some combinations have no row because no value was fo
 - Off-resonance per TR (φ, bSSFP): -360° to 360°
 - b-value (DWI): 0-3000 s/mm²
 
-The range of the time parameters and of the b-value becomes larger when you type a larger value.
+The range of the time parameters and of the b-value becomes larger when you type a larger value. The counts have a limit (ETL 512, N 1024).
 
 **Tissue Parameters** (customizable for each tissue):
 
@@ -205,7 +206,7 @@ MPRAGE and MP2RAGE have no short closed form. The simulator writes each part of 
 - Balanced SSFP: https://mriquestions.com/true-fispfiesta.html
 - Xiang QS, Hoff MN. Banding artifact removal for bSSFP imaging with an elliptical signal model. Magn Reson Med 2014;71:927-933. https://doi.org/10.1002/mrm.25098
 - Redpath TW, Smith FW. Use of a double inversion recovery pulse sequence to image selectively grey or white brain matter. Br J Radiol 1994;67:1258-1263. https://doi.org/10.1259/0007-1285-67-804-1258
-- Deichmann R, Good CD, Josephs O, Ashburner J, Turner R. Optimization of 3-D MP-RAGE sequences for structural brain imaging. NeuroImage 2000;12:112-127. https://doi.org/10.1006/nimg.2000.0601
+- Mugler JP, Brookeman JR. Three-dimensional magnetization-prepared rapid gradient-echo imaging (3D MP RAGE). Magn Reson Med 1990;15:152-157. https://doi.org/10.1002/mrm.1910150117
 - Marques JP, et al. MP2RAGE, a self bias-field corrected sequence for improved segmentation and T1-mapping at high field. NeuroImage 2010;49:1271-1281. https://doi.org/10.1016/j.neuroimage.2009.10.002
 - Stejskal EO, Tanner JE. Spin diffusion measurements: spin echoes in the presence of a time-dependent field gradient. J Chem Phys 1965;42:288-292. https://doi.org/10.1063/1.1695690
 

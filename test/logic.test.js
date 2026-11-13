@@ -5,7 +5,7 @@ const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const { sequences, paramDefinitions } = require('../sequences.js');
 const {
-    applyContrastAgent, limitT2s, ernstAngle, analyzeContrast, buildCsv,
+    paramLimit, applyContrastAgent, limitT2s, ernstAngle, analyzeContrast, buildCsv,
     encodeState, decodeState, MAX_NAME_LENGTH
 } = require('../logic.js');
 
@@ -228,4 +228,20 @@ test('decodeState: a state without the newer tissue parameters gets their defaul
         T1: 700, T2: 80, T2s: 60, Rho: 0.73,
         ADC: paramDefinitions.ADC.default, C: paramDefinitions.C.default
     });
+});
+
+test('decodeState: counts have a hard limit, so that a link cannot make a very long calculation', () => {
+    const s = decodeRaw(rawState({ q: 'FSE', p: { TR: 1e9, TE: 1e9, ETL: 1e9, ESP: 1 } }));
+    assert.equal(s.seqParams.ETL, paramDefinitions.ETL.hardMax);
+    assert.equal(s.seqParams.TR, 1e6);
+    const m = decodeRaw(rawState({ q: 'MPRAGE', p: { N: 5e5 } }));
+    assert.equal(m.seqParams.N, paramDefinitions.N.hardMax);
+});
+
+test('paramLimit: each count has a hard limit, and a fixed range is its own limit', () => {
+    for (const [key, def] of Object.entries(paramDefinitions)) {
+        if (def.integer) assert.ok(paramLimit(def) <= 2048, key);
+        if (def.fixedRange) assert.equal(paramLimit(def), def.max, key);
+        assert.ok(paramLimit(def) >= def.max, key);
+    }
 });

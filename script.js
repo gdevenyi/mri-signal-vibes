@@ -369,8 +369,11 @@ function addReferenceTissue(r) {
         T2s: r.T2s_ms !== null ? r.T2s_ms : undefined,
         Rho: (r.PD !== null && r.PD > 0 && r.PD <= 1) ? r.PD : undefined
     });
-    // A default T2* must not be longer than a T2 from the source
-    limitT2s(params);
+    // T2* cannot be longer than T2. Only a default value changes for this:
+    // a default T2* goes down to the T2, and a default T2 goes up to a T2*
+    // from the source.
+    if (r.T2s_ms === null) limitT2s(params);
+    else if (r.T2_ms === null && params.T2 < params.T2s) params.T2 = params.T2s;
 
     const missing = referenceMissingParams(r);
     tissues.push({
@@ -658,9 +661,12 @@ function syncSlider(idPrefix, pKey, value) {
 function createSlider(container, pKey, initVal, onChange, isCompact, idPrefix = '') {
     const def = paramDefinitions[pKey];
 
+    // The largest value that the program accepts (the slider range can grow up to it)
+    const limit = paramLimit(def);
+
     // A preset value can be larger than the slider range (for example CSF T1).
     if (!def.fixedRange && initVal > def.max) {
-        def.max = Math.ceil(initVal * 1.5);
+        def.max = Math.min(Math.ceil(initVal * 1.5), limit);
     }
 
     const group = document.createElement('div');
@@ -721,7 +727,7 @@ function createSlider(container, pKey, initVal, onChange, isCompact, idPrefix = 
 
             // Expand gently if pushing the edge (> 90%)
             if (newVal >= currentMax * 0.90) {
-                newMax = Math.ceil(currentMax * 1.1);
+                newMax = Math.min(Math.ceil(currentMax * 1.1), limit);
             }
             // Shrink gently if pulling away (< 70%) to keep detail,
             // but keep at least ~20% headroom to move right again.
@@ -752,9 +758,11 @@ function createSlider(container, pKey, initVal, onChange, isCompact, idPrefix = 
             return;
         }
 
+        if (newVal > limit) newVal = limit;
+
         // Auto-expand max if input > max (not for fixed ranges)
         if (!def.fixedRange && newVal > parseFloat(slider.max)) {
-            const newMax = Math.ceil(newVal * 1.5);
+            const newMax = Math.min(Math.ceil(newVal * 1.5), limit);
             slider.max = newMax;
             valInput.max = newMax;
             def.max = newMax;
@@ -762,7 +770,6 @@ function createSlider(container, pKey, initVal, onChange, isCompact, idPrefix = 
 
         // Clamp
         if (newVal < def.min) newVal = def.min;
-        if (def.fixedRange && newVal > def.max) newVal = def.max;
         if (def.integer) newVal = Math.round(newVal);
 
         valInput.value = newVal;
@@ -848,7 +855,7 @@ function updateChart() {
 
     // A count (ETL, readouts) has integer values only
     let steps = 2048;
-    if (def.integer) steps = Math.max(1, Math.round(range));
+    if (def.integer) steps = Math.min(steps, Math.max(1, Math.round(range)));
 
     const datasets = [];
     const series = []; // [{ name, color, xs, ys }]

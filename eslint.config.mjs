@@ -15,6 +15,7 @@ const appGlobals = {
   sequences: "readonly",
   paramDefinitions: "readonly",
   referenceData: "readonly",
+  paramLimit: "readonly",
   applyContrastAgent: "readonly",
   limitT2s: "readonly",
   ernstAngle: "readonly",

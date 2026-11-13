@@ -8,8 +8,15 @@
 
 const STATE_VERSION = 1;
 const MAX_NAME_LENGTH = 80;
-// Upper limit for parameters whose slider range can grow
+// Upper limit for parameters whose slider range can grow and that have no
+// hardMax of their own
 const MAX_OPEN_VALUE = 1e6;
+
+// The largest value that the program accepts for a parameter
+function paramLimit(def) {
+    if (def.fixedRange) return def.max;
+    return def.hardMax !== undefined ? def.hardMax : MAX_OPEN_VALUE;
+}
 
 // Relaxation times of a tissue that contains a contrast agent.
 // 1/T' = 1/T + r * C, with T in ms, r in 1/(mM*s) and C in mM.
@@ -138,8 +145,7 @@ function encodeState(state, paramDefinitions) {
 // A number in the range of the parameter, or the fallback
 function cleanNumber(value, def, fallback) {
     if (typeof value !== 'number' || !Number.isFinite(value)) return fallback;
-    const max = def.fixedRange ? def.max : MAX_OPEN_VALUE;
-    let v = Math.min(Math.max(value, def.min), max);
+    let v = Math.min(Math.max(value, def.min), paramLimit(def));
     if (def.integer) v = Math.round(v);
     return v;
 }
@@ -210,7 +216,7 @@ function decodeState(text, ctx) {
 // Node.js (tests). In the browser, these are globals.
 if (typeof module !== 'undefined' && module.exports) {
     module.exports = {
-        applyContrastAgent, limitT2s, ernstAngle, analyzeContrast, buildCsv,
+        paramLimit, applyContrastAgent, limitT2s, ernstAngle, analyzeContrast, buildCsv,
         encodeState, decodeState, MAX_NAME_LENGTH
     };
 }

@@ -24,6 +24,8 @@
 // fixedRange: the slider range does not grow or shrink with the value
 // fullAxis:   as the X-axis, the plot shows the full range (not 0 to the value)
 // integer:    the parameter is a count
+// hardMax:    the largest value that the program accepts, when the slider
+//             range can grow
 const paramDefinitions = {
     // Sequence
     'TR': { type: 'seq', label: 'TR (ms)', symbol: 'TR', unit: 'ms', min: 1, max: 5000, step: 10, default: 500 },
@@ -31,9 +33,9 @@ const paramDefinitions = {
     'TI': { type: 'seq', label: 'TI (ms)', symbol: 'TI', unit: 'ms', min: 0, max: 3000, step: 10, default: 150 },
     'TI1': { type: 'seq', label: 'TI1 (ms)', symbol: 'TI1', unit: 'ms', min: 0, max: 5000, step: 10, default: 700 },
     'TI2': { type: 'seq', label: 'TI2 (ms)', symbol: 'TI2', unit: 'ms', min: 0, max: 5000, step: 10, default: 2500 },
-    'ETL': { type: 'seq', label: 'ETL', symbol: 'ETL', unit: '', min: 1, max: 32, step: 1, default: 8, integer: true }, // Echo Train Length
+    'ETL': { type: 'seq', label: 'ETL', symbol: 'ETL', unit: '', min: 1, max: 32, step: 1, default: 8, integer: true, hardMax: 512 }, // Echo Train Length
     'ESP': { type: 'seq', label: 'ESP (ms)', symbol: 'ESP', unit: 'ms', min: 1, max: 100, step: 1, default: 10 }, // Echo Spacing
-    'N': { type: 'seq', label: 'Readouts per train', symbol: 'N', unit: '', min: 1, max: 256, step: 1, default: 160, integer: true },
+    'N': { type: 'seq', label: 'Readouts per train', symbol: 'N', unit: '', min: 1, max: 256, step: 1, default: 160, integer: true, hardMax: 1024 },
     'Theta': { type: 'seq', label: 'Flip Angle (°)', symbol: 'θ', unit: '°', min: 1, max: 180, step: 1, default: 90, fixedRange: true, fullAxis: true },
     'Theta2': { type: 'seq', label: 'Flip Angle 2 (°)', symbol: 'θ2', unit: '°', min: 1, max: 180, step: 1, default: 5, fixedRange: true, fullAxis: true },
     'Phi': { type: 'seq', label: 'Off-resonance per TR (°)', symbol: 'φ', unit: '°', min: -360, max: 360, step: 1, default: 0, fixedRange: true, fullAxis: true },
@@ -477,8 +479,8 @@ const sequences = {
     'MPRAGE': {
         name: 'MPRAGE',
         params: ['TR', 'TI', 'ESP', 'N', 'Theta', 'TE', 'T1', 'T2s', 'Rho'],
-        citation: 'Sequence: Deichmann et al., NeuroImage 2000;12:112-127. The equation is the steady state of the model in the notes; it was checked against a pulse-by-pulse simulation (see the tests).',
-        url: 'https://doi.org/10.1006/nimg.2000.0601',
+        citation: 'Sequence: Mugler & Brookeman, Magn Reson Med 1990;15:152-157. The equation is the steady state of the model in the notes; it was checked against a pulse-by-pulse simulation (see the tests).',
+        url: 'https://doi.org/10.1002/mrm.1910150117',
         defaults: { TR: 2300, TI: 900, ESP: 7, N: 176, Theta: 9, TE: 3 },
         defaultX: 'TI',
         notes: 'TR is the time between two inversion pulses (the cycle time), not the spacing of the readouts. ESP is the spacing of the N gradient echo readouts. TI is the time from the inversion pulse to the centre readout of the train, and the signal is that of the centre readout (linear phase encoding). The model has an ideal inversion pulse and perfect spoiling.',
