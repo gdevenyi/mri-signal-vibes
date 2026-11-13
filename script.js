@@ -3,7 +3,8 @@
  *
  * The parameters and signal equations (`paramDefinitions`, `sequences`) are
  * in sequences.js. The calculations of the interface (contrast agent,
- * contrast analysis, CSV, state in the URL) are in logic.js.
+ * contrast analysis, CSV, state in the URL) are in logic.js. The tissue
+ * presets are in presets.js and the literature values in reference-data.js.
  */
 
 // --- Configuration & Constants ---
@@ -15,33 +16,7 @@ const MAX_TISSUES = 5;
 // concentration are added only when they have an effect.
 const BASE_TISSUE_KEYS = ['Rho', 'T1', 'T2', 'T2s'];
 
-// Rounded, approximate values (see the Reference Values page)
-const REFERENCE_PRESETS = {
-    '1.5T': [
-        { name: 'White Matter', params: { T1: 700, T2: 80, T2s: 60, Rho: 0.73, ADC: 0.7 }, color: '#cf6679' },
-        { name: 'Gray Matter', params: { T1: 1000, T2: 100, T2s: 70, Rho: 0.83, ADC: 0.8 }, color: '#bb86fc' },
-        { name: 'CSF', params: { T1: 4000, T2: 2000, T2s: 1000, Rho: 1.0, ADC: 3.0 }, color: '#03dac6' }
-    ],
-    '3.0T': [
-        { name: 'White Matter', params: { T1: 950, T2: 95, T2s: 50, Rho: 0.73, ADC: 0.7 }, color: '#cf6679' },
-        { name: 'Gray Matter', params: { T1: 1450, T2: 95, T2s: 50, Rho: 0.83, ADC: 0.8 }, color: '#bb86fc' },
-        { name: 'CSF', params: { T1: 4000, T2: 2000, T2s: 300, Rho: 1.0, ADC: 3.0 }, color: '#03dac6' }
-    ],
-    '7.0T': [
-        { name: 'White Matter', params: { T1: 1300, T2: 60, T2s: 28, Rho: 0.73, ADC: 0.7 }, color: '#cf6679' },
-        { name: 'Gray Matter', params: { T1: 2000, T2: 53, T2s: 30, Rho: 0.83, ADC: 0.8 }, color: '#bb86fc' },
-        { name: 'CSF', params: { T1: 4500, T2: 1500, T2s: 100, Rho: 1.0, ADC: 3.0 }, color: '#03dac6' }
-    ]
-};
-
-// More tissues for the "Add preset tissue" list. These are rounded,
-// illustrative values for approximately 1.5 T. They are not from one source.
-const EXTRA_TISSUES = [
-    { name: 'Fat', params: { T1: 300, T2: 80, T2s: 40, Rho: 0.9, ADC: 0.1 } },
-    { name: 'Muscle', params: { T1: 1000, T2: 45, T2s: 30, Rho: 0.75, ADC: 1.5 } },
-    { name: 'Blood (arterial)', params: { T1: 1400, T2: 250, T2s: 150, Rho: 0.85, ADC: 2.0 } },
-    { name: 'Lesion (oedema)', params: { T1: 1500, T2: 200, T2s: 100, Rho: 0.9, ADC: 1.4 } }
-];
+// The tissue presets (REFERENCE_PRESETS, EXTRA_TISSUES) are in presets.js
 
 // --- State ---
 let currentSeqId = 'SE';
@@ -164,7 +139,9 @@ function init() {
     document.getElementById('export-png-btn').addEventListener('click', exportPng);
     document.getElementById('copy-link-btn').addEventListener('click', copyLink);
 
+    renderPresetTable();
     initReferenceTable();
+    initRelaxivityTable();
 
     // A link can contain the full state of the simulator
     const linked = readUrlState();
@@ -204,9 +181,12 @@ function initReferenceTable() {
     const unique = (key) => [...new Set(referenceData.map(r => r[key]))];
     const capitalize = (s) => s.charAt(0).toUpperCase() + s.slice(1);
 
+    const categoryNames = { brain: 'Brain and CSF', lesion: 'Brain lesion', body: 'Fat, marrow, muscle', blood: 'Blood' };
+    fill('lit-category', ['brain', 'lesion', 'body', 'blood'], (c) => categoryNames[c]);
+    fill('lit-value', ['T1_ms', 'T2_ms', 'T2s_ms', 'PD', 'ADC'], (k) => ({ T1_ms: 'T1', T2_ms: 'T2', T2s_ms: 'T2*', PD: 'PD', ADC: 'ADC' }[k]));
     fill('lit-species', unique('species').sort(), capitalize);
     fill('lit-condition', unique('condition').sort().reverse(), capitalize);
-    fill('lit-field', unique('field_T').sort((a, b) => a - b), (f) => `${f} T`);
+    fill('lit-field', unique('field_T').filter(f => f !== null).sort((a, b) => a - b), (f) => `${f} T`);
     document.getElementById('lit-tissue').addEventListener('input', renderReferenceTable);
 
     renderReferenceTable();
@@ -218,12 +198,16 @@ function formatRefValue(value, sd) {
 }
 
 function renderReferenceTable() {
+    const category = document.getElementById('lit-category').value;
+    const valueKey = document.getElementById('lit-value').value;
     const species = document.getElementById('lit-species').value;
     const condition = document.getElementById('lit-condition').value;
     const field = document.getElementById('lit-field').value;
     const tissueText = document.getElementById('lit-tissue').value.trim().toLowerCase();
 
     const rows = referenceData.filter(r =>
+        (!category || r.category === category) &&
+        (!valueKey || r[valueKey] !== null) &&
         (!species || r.species === species) &&
         (!condition || r.condition === condition) &&
         (!field || String(r.field_T) === field) &&
@@ -231,7 +215,7 @@ function renderReferenceTable() {
     ).sort((a, b) =>
         a.species.localeCompare(b.species) ||
         b.condition.localeCompare(a.condition) ||
-        a.field_T - b.field_T ||
+        (a.field_T === null ? 99 : a.field_T) - (b.field_T === null ? 99 : b.field_T) ||
         a.tissue.localeCompare(b.tissue) ||
         a.citation.localeCompare(b.citation)
     );
@@ -252,14 +236,14 @@ function renderReferenceTable() {
     if (rows.length === 0) {
         const tr = document.createElement('tr');
         const td = cell(tr, 'No rows for these filters. An empty result can be correct: for some species, conditions and field strengths, no published value was found.', 'lit-small');
-        td.colSpan = 11;
+        td.colSpan = 12;
         tbody.appendChild(tr);
     }
     rows.forEach(r => {
         const tr = document.createElement('tr');
         cell(tr, r.species.charAt(0).toUpperCase() + r.species.slice(1));
         cell(tr, r.condition);
-        cell(tr, `${r.field_T} T`, 'lit-nowrap');
+        cell(tr, r.field_T === null ? '—' : `${r.field_T} T`, 'lit-nowrap');
 
         const tissueTd = cell(tr, r.tissue);
         if (r.region_detail) {
@@ -273,6 +257,7 @@ function renderReferenceTable() {
         cell(tr, formatRefValue(r.T2_ms, r.T2_sd), 'lit-nowrap');
         cell(tr, formatRefValue(r.T2s_ms, r.T2s_sd), 'lit-nowrap');
         cell(tr, formatRefValue(r.PD, null), 'lit-nowrap');
+        cell(tr, formatRefValue(r.ADC, r.ADC_sd), 'lit-nowrap');
 
         const detailsTd = cell(tr, '', 'lit-small lit-details');
         if (r.gd_doped) {
@@ -317,17 +302,7 @@ function renderReferenceTable() {
         detailsTd.appendChild(more);
 
         const refTd = cell(tr, '', 'lit-small');
-        const url = r.doi ? `https://doi.org/${r.doi}` : (r.pmid ? `https://pubmed.ncbi.nlm.nih.gov/${r.pmid}/` : null);
-        if (url) {
-            const link = document.createElement('a');
-            link.href = url;
-            link.target = '_blank';
-            link.rel = 'noopener';
-            link.textContent = r.citation;
-            refTd.appendChild(link);
-        } else {
-            refTd.textContent = r.citation;
-        }
+        refTd.appendChild(referenceLink(r, r.citation));
 
         const actionTd = cell(tr, '');
         const btn = document.createElement('button');
@@ -355,7 +330,19 @@ function referenceMissingParams(r) {
     if (r.T2_ms === null) missing.push('T2');
     if (r.T2s_ms === null) missing.push('T2*');
     if (r.PD === null) missing.push('PD');
+    if (r.ADC === null) missing.push('ADC');
     return missing;
+}
+
+// Name of a tissue from a reference row, not longer than MAX_NAME_LENGTH.
+// It says which parameters are default values.
+function referenceTissueName(r, missing) {
+    const where = `, ${r.species} ${r.condition}` + (r.field_T === null ? '' : ` ${r.field_T}T`);
+    let suffix = missing.length ? ` (default ${missing.join(', ')})` : '';
+    if (where.length + suffix.length > MAX_NAME_LENGTH - 20) suffix = ` (${missing.length} defaults)`;
+    const room = MAX_NAME_LENGTH - where.length - suffix.length;
+    const tissue = r.tissue.length > room ? r.tissue.slice(0, room - 1) + '…' : r.tissue;
+    return tissue + where + suffix;
 }
 
 // Add one reference row to the simulator as a tissue. Returns false if the
@@ -367,7 +354,8 @@ function addReferenceTissue(r) {
         T1: r.T1_ms !== null ? r.T1_ms : undefined,
         T2: r.T2_ms !== null ? r.T2_ms : undefined,
         T2s: r.T2s_ms !== null ? r.T2s_ms : undefined,
-        Rho: (r.PD !== null && r.PD > 0 && r.PD <= 1) ? r.PD : undefined
+        Rho: (r.PD !== null && r.PD > 0 && r.PD <= 1) ? r.PD : undefined,
+        ADC: r.ADC !== null ? r.ADC : undefined
     });
     // T2* cannot be longer than T2. Only a default value changes for this:
     // a default T2* goes down to the T2, and a default T2 goes up to a T2*
@@ -378,12 +366,226 @@ function addReferenceTissue(r) {
     const missing = referenceMissingParams(r);
     tissues.push({
         id: nextTissueId++,
-        name: `${r.tissue}, ${r.species} ${r.condition} ${r.field_T}T` + (missing.length ? ` (default ${missing.join(', ')})` : ''),
+        name: referenceTissueName(r, missing),
         params: params,
         color: freeColor()
     });
     buildControls();
     return true;
+}
+
+// --- Preset table (data in presets.js) ---
+
+// "Dieringer 2014" from "Dieringer et al. PLoS One 2014;9:e91318"
+function shortCitation(citation) {
+    const author = citation.split(/ et al|,| [A-Z]{1,2}[ .]/)[0];
+    const year = citation.match(/\b(19|20)\d\d\b/);
+    return year ? `${author} ${year[0]}` : author;
+}
+
+function referenceUrl(r) {
+    return r.doi ? `https://doi.org/${r.doi}` : (r.pmid ? `https://pubmed.ncbi.nlm.nih.gov/${r.pmid}/` : null);
+}
+
+function referenceLink(r, text) {
+    const url = referenceUrl(r);
+    if (!url) return document.createTextNode(text);
+    const link = document.createElement('a');
+    link.href = url;
+    link.target = '_blank';
+    link.rel = 'noopener';
+    link.textContent = text;
+    return link;
+}
+
+// One cell of the preset table: the value, and its source or "illustrative"
+function presetCell(tr, preset, key, fieldT) {
+    const td = document.createElement('td');
+    td.textContent = preset.params[key];
+    const note = document.createElement('div');
+    note.className = 'lit-small';
+    const row = findPresetSource(preset, key, referenceData);
+    if (row) {
+        note.appendChild(referenceLink(row, shortCitation(row.citation)));
+        // Say so if the source row is for a different field, tissue or condition
+        const extra = [];
+        if (row.field_T !== null && row.field_T !== fieldT) extra.push(`${row.field_T} T`);
+        if (row.condition !== 'in vivo') extra.push('in vitro');
+        if (preset.srcNote && preset.srcNote[key]) extra.push(preset.srcNote[key]);
+        if (extra.length) note.appendChild(document.createTextNode(` (${extra.join(', ')})`));
+        note.title = `${row.tissue}${row.region_detail ? ', ' + row.region_detail : ''}; ${row.species}, ${row.condition}`
+            + (row.field_T === null ? '' : `, ${row.field_T} T`) + `. ${row.citation}`;
+    } else if (key === 'Rho' && preset.params.Rho === 1 && preset.name === 'CSF') {
+        note.textContent = 'reference (water = 1)';
+    } else {
+        note.textContent = 'illustrative';
+        note.classList.add('preset-illustrative');
+    }
+    td.appendChild(note);
+    tr.appendChild(td);
+}
+
+function renderPresetTable() {
+    const tbody = document.getElementById('preset-tbody');
+    tbody.innerHTML = '';
+    const keys = ['Rho', 'T1', 'T2', 'T2s', 'ADC'];
+    const addGroup = (label, fieldT, presets, button) => {
+        presets.forEach((preset, i) => {
+            const tr = document.createElement('tr');
+            if (i === 0) {
+                tr.className = 'row-group-start';
+                const groupTd = document.createElement('td');
+                groupTd.rowSpan = presets.length;
+                groupTd.className = 'field-col';
+                groupTd.textContent = label;
+                if (button) {
+                    groupTd.appendChild(document.createElement('br'));
+                    groupTd.appendChild(button);
+                }
+                tr.appendChild(groupTd);
+            }
+            const nameTd = document.createElement('td');
+            nameTd.textContent = preset.name;
+            tr.appendChild(nameTd);
+            keys.forEach(key => presetCell(tr, preset, key, fieldT));
+            tbody.appendChild(tr);
+        });
+    };
+    Object.keys(REFERENCE_PRESETS).forEach(strength => {
+        const btn = document.createElement('button');
+        btn.className = 'preset-load-btn';
+        btn.textContent = 'Load to Sim';
+        btn.addEventListener('click', () => loadPreset(strength));
+        addGroup(strength, parseFloat(strength), REFERENCE_PRESETS[strength], btn);
+    });
+    addGroup('Add preset list', 3, EXTRA_TISSUES, null);
+}
+
+// --- Contrast agent relaxivity table (data in reference-data.js) ---
+
+function initRelaxivityTable() {
+    const fill = (id, values, label) => {
+        const sel = document.getElementById(id);
+        sel.innerHTML = '';
+        [['', 'All'], ...values.map(v => [String(v), label(v)])].forEach(([value, text]) => {
+            const opt = document.createElement('option');
+            opt.value = value;
+            opt.textContent = text;
+            sel.appendChild(opt);
+        });
+        sel.addEventListener('change', renderRelaxivityTable);
+    };
+    const unique = (key) => [...new Set(relaxivityData.map(r => r[key]))];
+    fill('rel-agent', unique('agent').sort(), (a) => a);
+    fill('rel-field', unique('field_T').sort((a, b) => a - b), (f) => `${f} T`);
+    fill('rel-medium', unique('medium').sort(), (m) => m);
+    document.getElementById('rel-r2').addEventListener('change', renderRelaxivityTable);
+    renderRelaxivityTable();
+}
+
+function renderRelaxivityTable() {
+    const agentName = document.getElementById('rel-agent').value;
+    const field = document.getElementById('rel-field').value;
+    const medium = document.getElementById('rel-medium').value;
+    const withR2 = document.getElementById('rel-r2').checked;
+
+    const rows = relaxivityData.filter(r =>
+        (!agentName || r.agent === agentName) &&
+        (!field || String(r.field_T) === field) &&
+        (!medium || r.medium === medium) &&
+        (!withR2 || r.r2 !== null)
+    );
+    document.getElementById('rel-count').textContent = `${rows.length} of ${relaxivityData.length} rows`;
+
+    const cell = (tr, text, className) => {
+        const td = document.createElement('td');
+        td.textContent = text;
+        if (className) td.className = className;
+        tr.appendChild(td);
+        return td;
+    };
+    const badge = (parent, text, title, muted) => {
+        const span = document.createElement('span');
+        span.className = muted ? 'lit-badge lit-badge-muted' : 'lit-badge';
+        span.textContent = text;
+        span.title = title;
+        parent.appendChild(span);
+    };
+
+    const tbody = document.getElementById('rel-tbody');
+    tbody.innerHTML = '';
+    if (rows.length === 0) {
+        const tr = document.createElement('tr');
+        const td = cell(tr, 'No rows for these filters.', 'lit-small');
+        td.colSpan = 10;
+        tbody.appendChild(tr);
+    }
+    rows.forEach(r => {
+        const tr = document.createElement('tr');
+        const agentTd = cell(tr, r.agent);
+        if (r.brand) {
+            const brand = document.createElement('div');
+            brand.className = 'lit-small';
+            brand.textContent = r.brand;
+            agentTd.appendChild(brand);
+        }
+        cell(tr, `${r.field_T} T`, 'lit-nowrap');
+        cell(tr, r.medium);
+        cell(tr, r.temperature || '—', 'lit-nowrap');
+        cell(tr, formatRefValue(r.r1, r.r1_sd), 'lit-nowrap');
+        cell(tr, formatRefValue(r.r2, r.r2_sd), 'lit-nowrap');
+        cell(tr, formatRefValue(r.r2s, null), 'lit-nowrap');
+
+        const detailsTd = cell(tr, '', 'lit-small lit-details');
+        if (r.secondary) {
+            badge(detailsTd, 'Cited value', 'The paper in the reference gives this value from another paper. The original paper was not read.', false);
+        }
+        if (!r.checked) {
+            badge(detailsTd, 'Read once', 'The values were read one time in the full text. It was not possible to find them again in a second copy of the source.', true);
+        }
+        if (r.method) {
+            const line = document.createElement('div');
+            line.textContent = r.method;
+            detailsTd.appendChild(line);
+        }
+        const more = document.createElement('details');
+        const summary = document.createElement('summary');
+        summary.textContent = 'Notes and source quote';
+        more.appendChild(summary);
+        if (r.notes) {
+            const note = document.createElement('div');
+            note.textContent = r.notes;
+            more.appendChild(note);
+        }
+        const quote = document.createElement('blockquote');
+        quote.textContent = `${r.quote} (${r.read_from})`;
+        more.appendChild(quote);
+        detailsTd.appendChild(more);
+
+        const refTd = cell(tr, '', 'lit-small');
+        refTd.appendChild(referenceLink(r, r.citation));
+
+        const actionTd = cell(tr, '');
+        if (r.r1 !== null) {
+            const btn = document.createElement('button');
+            btn.className = 'preset-load-btn';
+            btn.textContent = r.r2 !== null ? 'Use r1, r2' : 'Use r1';
+            btn.title = r.r2 !== null
+                ? 'Set the relaxivities of the simulator to these values and turn on the Contrast agent option'
+                : 'Set r1 of the simulator to this value and turn on the Contrast agent option. The source does not give r2: r2 does not change.';
+            btn.addEventListener('click', () => {
+                const max = paramDefinitions.r1.max;
+                agent.r1 = Math.min(r.r1, max);
+                if (r.r2 !== null) agent.r2 = Math.min(r.r2, max);
+                agent.on = true;
+                document.getElementById('agent-chk').checked = true;
+                buildControls();
+                flashButton(btn, 'Set');
+            });
+            actionTd.appendChild(btn);
+        }
+        tbody.appendChild(tr);
+    });
 }
 
 // --- Core Logic ---
@@ -452,8 +654,7 @@ function setSequence(seqId, seqParams, xParam) {
     updateView();
 }
 
-// Expose to global scope for HTML buttons
-window.loadPreset = function (strength) {
+function loadPreset(strength) {
     if (!REFERENCE_PRESETS[strength]) return;
 
     setTissues(REFERENCE_PRESETS[strength]);
@@ -462,7 +663,7 @@ window.loadPreset = function (strength) {
     currentMode = 'sim';
     updateView();
     buildControls();
-};
+}
 
 function setReferenceMode() {
     currentMode = 'ref';

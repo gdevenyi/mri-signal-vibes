@@ -48,8 +48,8 @@ const paramDefinitions = {
     'ADC': { type: 'tissue', label: 'ADC (10⁻³ mm²/s)', symbol: 'ADC', unit: '10⁻³ mm²/s', min: 0, max: 3.5, step: 0.01, default: 0.8, fixedRange: true },
     'C': { type: 'tissue', label: 'Contrast agent (mM)', symbol: 'C', unit: 'mM', min: 0, max: 5, step: 0.01, default: 0, fixedRange: true },
     // Contrast agent
-    'r1': { type: 'agent', label: 'Relaxivity r1 (1/(mM·s))', symbol: 'r1', unit: '1/(mM·s)', min: 0, max: 30, step: 0.1, default: 4, fixedRange: true },
-    'r2': { type: 'agent', label: 'Relaxivity r2 (1/(mM·s))', symbol: 'r2', unit: '1/(mM·s)', min: 0, max: 30, step: 0.1, default: 5, fixedRange: true }
+    'r1': { type: 'agent', label: 'Relaxivity r1 (1/(mM·s))', symbol: 'r1', unit: '1/(mM·s)', min: 0, max: 30, step: 0.1, default: 3.6, fixedRange: true },
+    'r2': { type: 'agent', label: 'Relaxivity r2 (1/(mM·s))', symbol: 'r2', unit: '1/(mM·s)', min: 0, max: 30, step: 0.1, default: 4.3, fixedRange: true }
 };
 
 // --- Longitudinal magnetization as affine maps M -> a*M + b (with M0 = 1) ---
@@ -402,7 +402,7 @@ const sequences = {
         citation: 'Sequence: Redpath & Smith, Br J Radiol 1994;67:1258-1263. The equation is the steady state of the model in the notes; it was checked against a Bloch simulation (see the tests).',
         url: 'https://doi.org/10.1259/0007-1285-67-804-1258',
         // These values null CSF and white matter of the 1.5T preset
-        defaults: { TR: 10000, TE: 20, TI1: 3380, TI2: 470 },
+        defaults: { TR: 10000, TE: 20, TI1: 3350, TI2: 460 },
         defaultX: 'TI2',
         notes: 'TI1 is the time from the first inversion pulse to the excitation. TI2 is the time from the second inversion pulse to the excitation, so TI2 < TI1. The model is a spin echo with a refocusing pulse at TE/2 and ideal inversion pulses. The Null button of a tissue sets TI2 for the current TI1. "Null tissues 1 + 2" sets TI1 and TI2 together.',
         equationStr: '$$ S = \\rho e^{-TE/T2} \\left(1 - 2e^{-TI_2/T1} + 2e^{-TI_1/T1} - 2e^{-(TR - TE/2)/T1} + e^{-TR/T1}\\right) $$',

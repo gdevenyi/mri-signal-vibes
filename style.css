@@ -760,3 +760,18 @@ body {
     color: var(--text-muted);
     font-size: 0.75rem;
 }
+
+/* Preset table: source below each value */
+.preset-table td {
+    vertical-align: top;
+}
+
+.preset-table .lit-small a {
+    color: var(--primary);
+    text-decoration: none;
+}
+
+.preset-illustrative {
+    color: var(--error);
+    font-style: italic;
+}

@@ -15,6 +15,10 @@ const appGlobals = {
   sequences: "readonly",
   paramDefinitions: "readonly",
   referenceData: "readonly",
+  relaxivityData: "readonly",
+  REFERENCE_PRESETS: "readonly",
+  EXTRA_TISSUES: "readonly",
+  findPresetSource: "readonly",
   paramLimit: "readonly",
   applyContrastAgent: "readonly",
   limitT2s: "readonly",
@@ -42,7 +46,7 @@ export default [
     rules
   },
   {
-    files: ["sequences.js", "logic.js", "reference-data.js"],
+    files: ["sequences.js", "logic.js", "presets.js", "reference-data.js"],
     languageOptions: {
       ecmaVersion: "latest",
       sourceType: "script",

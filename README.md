@@ -44,15 +44,15 @@ Comprehensive support for common MRI sequences with mathematically accurate sign
 
 ### Tissue Library
 
-Pre-configured tissue presets at multiple field strengths:
+Tissue presets at multiple field strengths (human brain, in vivo):
 
 - **1.5T**: White Matter, Gray Matter, CSF
 - **3.0T**: White Matter, Gray Matter, CSF
 - **7.0T**: White Matter, Gray Matter, CSF
 
-The **Add preset** list adds one more tissue: fat, muscle, arterial blood or a lesion with oedema.
+The **Add preset** list adds one more tissue with values for 3 T: subcutaneous fat, skeletal muscle, venous blood or peritumoral edema of a glioma.
 
-All presets are rounded, approximate values. They are not from one source. The values of the **Add preset** list are illustrative values for approximately 1.5 T.
+Each preset value is the value of one row of the literature table, and the **Reference Values** page shows that source for each value. Values from different sources are not averaged, so a preset is one published result and not a consensus value. Some values have no source, because no readable published value was found (for example T2\* of CSF, and the proton density of fat, muscle and blood). These values are only illustrative, and the page gives them the mark "illustrative". The presets are in `presets.js`.
 
 ### Contrast Agent
 
@@ -60,26 +60,31 @@ The **Contrast agent** option gives each tissue a concentration $C$ (mM). The re
 
 $$\frac{1}{T_1'} = \frac{1}{T_1} + r_1 C, \qquad \frac{1}{T_2'} = \frac{1}{T_2} + r_2 C, \qquad \frac{1}{T_2^{*\prime}} = \frac{1}{T_2^*} + r_2 C$$
 
-The default relaxivities ($r_1 = 4$, $r_2 = 5$ per mM per second) are only approximate. The relaxivity depends on the agent, the field strength and the tissue. For measured values, see Rohrer et al., Invest Radiol 2005;40:715-724 (https://doi.org/10.1097/01.rli.0000184756.66360.d3).
+The default relaxivities ($r_1 = 3.6$, $r_2 = 4.3$ per mM per second) are those of gadoterate in bovine plasma at 1.5 T and 37 °C (Rohrer et al., Invest Radiol 2005;40:715-724, as printed in Robic et al., Invest Radiol 2019;54:475-484). The relaxivity depends on the agent, the field strength, the medium and the temperature. The **Reference Values** page has a table of published relaxivities, and a button on each row sets $r_1$ and $r_2$ of the simulator.
 
 ### Literature Reference Values
 
-The **Reference Values** page also has a table of published brain relaxation values, with a reference for each row:
+The **Reference Values** page has a table of published values, with a reference for each row:
 
-- **Species**: human, mouse and rat
-- **Condition**: in vivo and ex vivo (post-mortem, fixed and unfixed)
+- **Tissue type**: normal brain and CSF, brain lesions (the pathology is in the words of the source), fat, bone marrow and muscle, and blood
+- **Species**: human, mouse and rat (the tissue types other than brain are human only)
+- **Condition**: in vivo and ex vivo (post-mortem, fixed and unfixed; blood samples in vitro)
 - **Field strength**: 1.5 T to 17.6 T
-- **Values**: T1, T2, T2\* and proton density, as given in the source
-- **Filters**: species, condition, field strength and tissue name
+- **Values**: T1, T2, T2\*, proton density and ADC, as given in the source
+- **Filters**: tissue type, value, species, condition, field strength and tissue name
 - **Add to Sim**: adds the row to the simulator as a tissue. If the source does not give a value, the simulator uses a default value and the tissue name says so.
 
 Each row is one measurement from one source. Rows are not averaged, and different sources can disagree. For ex vivo tissue, the fixation, the temperature and contrast agents change the values significantly, so the table shows them. Rows with a contrast agent in the sample have a "Contrast agent" mark.
 
-The data are in `reference-data.js`. Each record has the text of the source that contains the values (`quote`). For records with `checked: true`, the quote or all its numbers were found again in a second, fresh copy of the abstract or the open full text. This shows that the values are in the source. It does not fully prove that each value is with the correct tissue, so compare important values with the paper. Records with `checked: false` (a "Read once" mark in the table) were read one time in the publisher full text, and a second copy was not available.
+The ADC is in $10^{-3}$ mm²/s. Sources print it in different units, so the notes of each row give the value and the unit as printed. The measure (ADC, mean diffusivity, minimum ADC) and the b-values are in the details of the row.
+
+A second table has published relaxivities of gadolinium contrast agents (r1, r2 and r2\* in 1/(mM·s)), with the field strength, the medium and the temperature. Most open sources give only r1. The r2 values of the usual agents are from one paper (Rohrer et al. 2005), as printed in a later paper; these rows have a "Cited value" mark.
+
+The data are in `reference-data.js`. Each record has the text of the source that contains the values (`quote`). For records with `checked: true`, the quote or all its numbers were found again in a second, fresh copy of the abstract or the open full text. This shows that the values are in the source. It does not fully prove that each value is with the correct tissue, so compare important values with the paper. Records with `checked: false` (a "Read once" mark in the table) were read one time, and a second copy was not available.
 
 The ± value is the error as printed in the source. It is usually an SD. If the source gives a standard error, a median or an approximate value, the notes of the row say so. Some rows are not healthy adult tissue (for example multiple sclerosis tissue, aged or juvenile animals, or the control side of a disease model); the details of the row say so.
 
-The table is not complete. Some combinations have no row because no value was found or because the paper was not available to read: for example human in vivo above 9.4 T, mouse and rat at 14.1 T, and mouse at clinical field strengths.
+The table is not complete. Some combinations have no row because no value was found or because the paper was not available to read: for example human in vivo above 9.4 T, mouse and rat at 14.1 T, mouse at clinical field strengths, CSF at 1.5 T, T2\* and proton density of fat, muscle and blood, and r2 of contrast agents in human plasma or blood.
 
 ### Parameter Control
 
@@ -135,9 +140,9 @@ Simply open `index.html` in a modern web browser. No build process or server req
 
 ## Development
 
-The parameters and signal equations are in `sequences.js`, the calculations of the interface (contrast agent, contrast analysis, CSV, state in the URL) are in `logic.js`, and the literature reference values are in `reference-data.js`. These files have no DOM code. The user interface is in `script.js`.
+The parameters and signal equations are in `sequences.js`, the calculations of the interface (contrast agent, contrast analysis, CSV, state in the URL) are in `logic.js`, the tissue presets are in `presets.js`, and the literature reference values are in `reference-data.js`. These files have no DOM code. The user interface is in `script.js`.
 
-Run the tests of the signal equations and of the reference data with Node.js (no packages are necessary):
+Run the tests of the signal equations, of the reference data and of the presets with Node.js (no packages are necessary):
 
 ```sh
 node --test

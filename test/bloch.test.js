@@ -9,6 +9,7 @@
 const { test } = require('node:test');
 const assert = require('node:assert/strict');
 const { sequences, paramDefinitions } = require('../sequences.js');
+const { REFERENCE_PRESETS } = require('../presets.js');
 
 const WM = { T1: 700, T2: 80, T2s: 60, Rho: 0.73, ADC: 0.7 };
 const GM = { T1: 1000, T2: 100, T2s: 70, Rho: 0.83, ADC: 0.8 };
@@ -149,15 +150,23 @@ test('DIR.nullParams gives a TI2 with no signal', () => {
     assert.equal(sequences.DIR.nullParams({ TR: 300, TE: 20, TI1: 5 }, { T1: 4000 }), null);
 });
 
-test('DIR.nullPair gives no signal for the two tissues, and the defaults use it', () => {
+test('DIR.nullPair gives no signal for the two tissues', () => {
     const p = { TR: 10000, TE: 20 };
     const r = sequences.DIR.nullPair(p, CSF, WM);
     assert.notEqual(r, null);
     close(sequences.DIR.calc({ ...p, ...r }, CSF), 0, 1e-9);
     close(sequences.DIR.calc({ ...p, ...r }, WM), 0, 1e-9);
     assert.ok(Math.abs(sequences.DIR.calc({ ...p, ...r }, GM)) > 0.05);
-    // The default values are this result, rounded to the slider step
+});
+
+test('the DIR defaults null CSF and white matter of the 1.5T preset', () => {
+    const preset = REFERENCE_PRESETS['1.5T'];
+    const wm = preset.find(t => t.name === 'White Matter').params;
+    const csf = preset.find(t => t.name === 'CSF').params;
     const d = sequences.DIR.defaults;
+    const r = sequences.DIR.nullPair({ TR: d.TR, TE: d.TE }, csf, wm);
+    assert.notEqual(r, null);
+    // The default values are this result, rounded to the slider step
     close(d.TI1, r.TI1, 10);
     close(d.TI2, r.TI2, 10);
 });
