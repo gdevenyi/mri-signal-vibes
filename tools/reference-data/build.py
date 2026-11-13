@@ -6,6 +6,7 @@ import sys
 ref, stat, out = sys.argv[1:4]
 status = {(f, i): s for f, i, s in json.load(open(stat))}
 CLEAN = [
+    (r"it is in the quote and is not recorded here", "it is in the quote"),
     (
         r"the tool drops the '±' character \(the quote shows 'mean  error' with two spaces\) and also drops hyphens and dashes;?",
         "",

@@ -541,7 +541,7 @@ function renderRelaxivityTable() {
 
         const detailsTd = cell(tr, '', 'lit-small lit-details');
         if (r.secondary) {
-            badge(detailsTd, 'Cited value', 'The paper in the reference gives this value from another paper. The original paper was not read.', false);
+            badge(detailsTd, 'Cited value', 'The paper in the reference did not measure this value. The notes say where the value comes from.', false);
         }
         if (!r.checked) {
             badge(detailsTd, 'Read once', 'The values were read one time in the full text. It was not possible to find them again in a second copy of the source.', true);

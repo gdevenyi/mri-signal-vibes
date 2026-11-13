@@ -402,7 +402,7 @@ const sequences = {
         citation: 'Sequence: Redpath & Smith, Br J Radiol 1994;67:1258-1263. The equation is the steady state of the model in the notes; it was checked against a Bloch simulation (see the tests).',
         url: 'https://doi.org/10.1259/0007-1285-67-804-1258',
         // These values null CSF and white matter of the 1.5T preset
-        defaults: { TR: 10000, TE: 20, TI1: 3350, TI2: 460 },
+        defaults: { TR: 10000, TE: 20, TI1: 3380, TI2: 460 },
         defaultX: 'TI2',
         notes: 'TI1 is the time from the first inversion pulse to the excitation. TI2 is the time from the second inversion pulse to the excitation, so TI2 < TI1. The model is a spin echo with a refocusing pulse at TE/2 and ideal inversion pulses. The Null button of a tissue sets TI2 for the current TI1. "Null tissues 1 + 2" sets TI1 and TI2 together.',
         equationStr: '$$ S = \\rho e^{-TE/T2} \\left(1 - 2e^{-TI_2/T1} + 2e^{-TI_1/T1} - 2e^{-(TR - TE/2)/T1} + e^{-TR/T1}\\right) $$',

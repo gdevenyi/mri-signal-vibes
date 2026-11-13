@@ -27,18 +27,18 @@ const REFERENCE_PRESETS = {
     '1.5T': [
         {
             name: 'White Matter', color: '#cf6679',
-            params: { T1: 678, T2: 80, T2s: 60, Rho: 0.7226, ADC: BRAIN_ADC.WM },
-            src: { T1: ['24621588', 'White matter'], T2: ['20593370', 'White matter'], Rho: ['40815301', 'White matter'], ADC: [BRAIN_ADC_SRC, 'White matter'] }
+            params: { T1: 678, T2: 80, T2s: 66.2, Rho: 0.7226, ADC: BRAIN_ADC.WM },
+            src: { T1: ['24621588', 'White matter'], T2: ['20593370', 'White matter'], T2s: ['17459640', 'White matter'], Rho: ['40815301', 'White matter'], ADC: [BRAIN_ADC_SRC, 'White matter'] }
         },
         {
             name: 'Gray Matter', color: '#bb86fc',
-            params: { T1: 1154, T2: 87, T2s: 70, Rho: 0.8406, ADC: BRAIN_ADC.GM },
-            src: { T1: ['24621588', 'Gray matter'], T2: ['20593370', 'Cortical gray matter'], Rho: ['40815301', 'Cortical gray matter'], ADC: [BRAIN_ADC_SRC, 'Cortical gray matter'] }
+            params: { T1: 1154, T2: 87, T2s: 84, Rho: 0.8406, ADC: BRAIN_ADC.GM },
+            src: { T1: ['24621588', 'Gray matter'], T2: ['20593370', 'Cortical gray matter'], T2s: ['17459640', 'Cortical gray matter'], Rho: ['40815301', 'Cortical gray matter'], ADC: [BRAIN_ADC_SRC, 'Cortical gray matter'] }
         },
         {
             name: 'CSF', color: '#03dac6',
-            params: { T1: 4000, T2: 2000, T2s: 1000, Rho: 1.0, ADC: BRAIN_ADC.CSF },
-            src: { ADC: [BRAIN_ADC_SRC, 'Cerebrospinal fluid'] }
+            params: { T1: 4070, T2: 2000, T2s: 1000, Rho: 1.0, ADC: BRAIN_ADC.CSF },
+            src: { T1: ['17260370', 'CSF'], ADC: [BRAIN_ADC_SRC, 'CSF'] }
         }
     ],
     '3.0T': [
@@ -55,7 +55,7 @@ const REFERENCE_PRESETS = {
         {
             name: 'CSF', color: '#03dac6',
             params: { T1: 4454, T2: 2372.9, T2s: 300, Rho: 1.0, ADC: BRAIN_ADC.CSF },
-            src: { T1: ['37582262', 'CSF'], T2: ['37582262', 'CSF'], ADC: [BRAIN_ADC_SRC, 'Cerebrospinal fluid'] }
+            src: { T1: ['37582262', 'CSF'], T2: ['37582262', 'CSF'], ADC: [BRAIN_ADC_SRC, 'CSF'] }
         }
     ],
     '7.0T': [
@@ -71,8 +71,8 @@ const REFERENCE_PRESETS = {
         },
         {
             name: 'CSF', color: '#03dac6',
-            params: { T1: 4500, T2: 1050, T2s: 100, Rho: 1.0, ADC: BRAIN_ADC.CSF },
-            src: { T2: ['29110239', 'CSF'], ADC: [BRAIN_ADC_SRC, 'Cerebrospinal fluid'] }
+            params: { T1: 4425, T2: 1050, T2s: 100, Rho: 1.0, ADC: BRAIN_ADC.CSF },
+            src: { T1: ['17260370', 'CSF'], T2: ['29110239', 'CSF'], ADC: [BRAIN_ADC_SRC, 'CSF'] }
         }
     ]
 };
@@ -105,7 +105,7 @@ const EXTRA_TISSUES = [
 
 // The default relaxivities r1 and r2 (paramDefinitions in sequences.js) are
 // those of this row of `relaxivityData`
-const DEFAULT_AGENT_SOURCE = { agent: 'Gadoterate', field_T: 1.5, medium: 'bovine plasma', pmid: '30973459' };
+const DEFAULT_AGENT_SOURCE = { agent: 'Gadoterate', field_T: 1.5, medium: 'bovine plasma', pmid: '16230904' };
 
 // Name of the literature field for each preset parameter
 const PRESET_FIELD = { T1: 'T1_ms', T2: 'T2_ms', T2s: 'T2s_ms', Rho: 'PD', ADC: 'ADC' };

@@ -99,7 +99,9 @@ test('each relaxivity record has an agent, a field, a medium, a value and a refe
         assert.ok(r.r1 !== null || r.r2 !== null || r.r2s !== null, whereRel(r));
         for (const key of ['r1', 'r2', 'r2s']) {
             const v = r[key];
-            assert.ok(v === null || (typeof v === 'number' && v > 0 && v < 200), `${key} ${whereRel(r)}`);
+            // r2* in whole blood can be some hundreds per mM per second
+            const limit = key === 'r2s' ? 1000 : 200;
+            assert.ok(v === null || (typeof v === 'number' && v > 0 && v < limit), `${key} ${whereRel(r)}`);
         }
         assert.equal(typeof r.secondary, 'boolean', whereRel(r));
         assert.equal(typeof r.checked, 'boolean', whereRel(r));
