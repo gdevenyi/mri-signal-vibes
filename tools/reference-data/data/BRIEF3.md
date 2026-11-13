@@ -7,10 +7,10 @@ agents. The user supplied PDF files of papers that were not readable before. You
 project repository and do not copy the PDFs anywhere else.
 
 ## Where the files are
-- PDFs: /home/gdevenyi/projects/mri-signal-vibes/papers/<name>.pdf (read with the Read
+- PDFs: papers/<name>.pdf (read with the Read
   tool and its `pages` parameter; this shows the real page, including tables)
 - Plain text (pdftotext -layout) of each PDF:
-  /var/tmp/claude/claude-1000/-home-gdevenyi-projects-mri-signal-vibes/3991b419-fabc-4328-90a2-88478dda8840/scratchpad/papers_txt/<name>.txt
+  <text directory>/<name>.txt
   Use the text to find the tables and to copy quotes. ALWAYS confirm table values on the
   PDF page itself (Read tool), because the text layout can put a number in the wrong
   column, and old papers have OCR errors.
