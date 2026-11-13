@@ -40,6 +40,11 @@ PROCESS = re.compile(
     r"which PMC gives|read in (Europe )?PMC|Quote from PMC|it is in the quote and is not|Two later papers|published erratum|the 20\d\d review|\bmy\b|the text read|E-utilities|Europe PMC|PubMed and|open J-STAGE|is recorded\.$|were not recorded|not recorded|are recorded|recorded here|recorded as printed|see the \d+ ms record"
 )
 REWRITE = [
+    (
+        r"the error field is the printed rate error changed to a time \(0\.01/R1\^2\); ",
+        "",
+    ),
+    (r"T1_sd is the printed rate error changed to a time \(0\.01/R1\^2\); ", ""),
     (r"thus r\d_sd and r\d_sd are null", "thus the error fields are empty"),
     (r"the the error field fields are null", "the error fields are empty"),
     (r"the error field and the error field are null", "the error fields are empty"),
@@ -49,7 +54,10 @@ REWRITE = [
     (r", out of scope\)", ")"),
     (r"\(reference\), recorded;", "(reference), used here;"),
     (r"Later papers of this batch quote", "Later papers give"),
-    (r"gd_doped=false is NOT confirmed", "it is not confirmed that the sample had no contrast agent"),
+    (
+        r"gd_doped=false is NOT confirmed",
+        "it is not confirmed that the sample had no contrast agent",
+    ),
     (r"thus b_values is null", "thus no b-value is given"),
     (r"Not recorded:", "Not in this table:"),
     (r", recorded as T2", ", shown here as T2"),
@@ -278,6 +286,18 @@ def pdf_where(r):
 dropped_pdf = collections.Counter()
 for n in PDF_NAMES:
     for i, r in enumerate(pdf[n]["records_tissue"]):
+        extra = []
+        if str(r["pmid"]) == "11283978" and r["T1_sd"] is not None:
+            # Spees 2001: the error of the time was calculated from the error of the rate.
+            # As for all other rates, the error is not converted.
+            r = dict(r, T1_sd=None)
+            extra.append(
+                "The error of the rate is not converted to an error of the time."
+            )
+        if str(r["pmid"]) == "22505333":
+            extra.append(
+                "The paper does not say if a contrast agent was given before the T2 measurement."
+            )
         recs.append(
             {
                 "species": r["species"],
@@ -302,7 +322,7 @@ for n in PDF_NAMES:
                 "gd_doped": bool(r["gd_doped"]),
                 "converted_from_rate": bool(r["converted_from_rate"]),
                 "checked": status5[f"{n}:records_tissue:{i}"],
-                "notes": clean_notes(r["notes"]),
+                "notes": clean_notes(r["notes"], extra),
                 "quote": r["quote"],
                 "read_from": pdf_where(r),
                 "pmid": str(r["pmid"]) if r["pmid"] else None,
@@ -420,6 +440,7 @@ for i, r in enumerate(json.load(open(f"{ref}/relaxivity.json"))["records"]):
             "r2_sd": num(r["r2_sd"]),
             "r2s": num(r["r2s"]),
             "secondary": secondary,
+            "warning": None,
             "checked": ok,
             "method": r["method"] or None,
             "notes": clean_notes(r["notes"], extra),
@@ -430,6 +451,10 @@ for i, r in enumerate(json.load(open(f"{ref}/relaxivity.json"))["records"]):
             "citation": r["citation"],
         }
     )
+PINTASKE_WARNING = (
+    "An erratum to this paper exists (Invest Radiol 2006;41(12):859) and was not read. "
+    "These are the values of the original article. Later papers give different values for some cells."
+)
 NOT_GADOLINIUM = ("mangafodipir", "ferucarbotran", "ferumoxide")
 MEDIA = {"human blood plasma": "human plasma", "water (distilled)": "water"}
 for n in PDF_NAMES:
@@ -466,6 +491,7 @@ for n in PDF_NAMES:
                 "r2_sd": num(r["r2_sd"]),
                 "r2s": num(r["r2s"]),
                 "secondary": secondary,
+                "warning": PINTASKE_WARNING if str(r["pmid"]) == "16481903" else None,
                 "checked": status5[f"{n}:records_relax:{i}"],
                 "method": r["method"] or None,
                 "notes": clean_notes(notes, extra),
@@ -521,6 +547,8 @@ head = """/**
  *   r1, r2, r2s             - relaxivities (r2s is r2*), null if the source does not give them
  *   secondary               - true if the paper in the reference did not measure the value
  *                             (the notes say where the value comes from)
+ *   warning                 - a text if the values need caution (for example an erratum that
+ *                             was not read), or null
  *   checked, quote, read_from, pmid, doi, citation - as above
  *
  * This file has no DOM code, so that Node.js can load it for the tests.

@@ -104,6 +104,7 @@ test('each relaxivity record has an agent, a field, a medium, a value and a refe
             assert.ok(v === null || (typeof v === 'number' && v > 0 && v < limit), `${key} ${whereRel(r)}`);
         }
         assert.equal(typeof r.secondary, 'boolean', whereRel(r));
+        assert.ok(r.warning === null || (typeof r.warning === 'string' && r.warning.length > 0), whereRel(r));
         assert.equal(typeof r.checked, 'boolean', whereRel(r));
         assert.ok(typeof r.quote === 'string' && r.quote.length > 0, whereRel(r));
         assert.ok(typeof r.citation === 'string' && r.citation.length > 0, whereRel(r));
@@ -158,4 +159,17 @@ test('each preset has all parameters in the slider range and in a physical order
         assert.ok(p.params.Rho > 0 && p.params.Rho <= 1, where);
         assert.ok(p.params.ADC >= paramDefinitions.ADC.min && p.params.ADC <= paramDefinitions.ADC.max, where);
     }
+});
+
+test('the times that come from rates have no converted error', () => {
+    // Spees 2001 (blood in vitro): the error of the rate is not an error of the time
+    for (const r of referenceData.filter(x => x.pmid === '11283978')) {
+        assert.equal(r.T1_sd, null, where(r));
+    }
+});
+
+test('the relaxivity rows of a paper with an unread erratum have a warning', () => {
+    const rows = relaxivityData.filter(r => r.pmid === '16481903');
+    assert.ok(rows.length > 0);
+    for (const r of rows) assert.match(r.warning, /erratum/, whereRel(r));
 });

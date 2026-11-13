@@ -540,6 +540,13 @@ function renderRelaxivityTable() {
         cell(tr, formatRefValue(r.r2s, null), 'lit-nowrap');
 
         const detailsTd = cell(tr, '', 'lit-small lit-details');
+        if (r.warning) {
+            badge(detailsTd, 'Caution', r.warning, false);
+            const warn = document.createElement('div');
+            warn.className = 'preset-illustrative';
+            warn.textContent = r.warning;
+            detailsTd.appendChild(warn);
+        }
         if (r.secondary) {
             badge(detailsTd, 'Cited value', 'The paper in the reference did not measure this value. The notes say where the value comes from.', false);
         }
