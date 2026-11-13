@@ -29,3 +29,8 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm run lint
       - run: pnpm run test
+      - name: The reference data file is the output of its generator
+        run: |
+          python3 -I tools/reference-data/build_all.py tools/reference-data/data reference-data.js
+          python3 -I tools/reference-data/leads.py
+          git diff --exit-code -- reference-data.js tools/reference-data/LEADS.md
