@@ -66,7 +66,7 @@ The default relaxivities ($r_1 = 3.6$, $r_2 = 4.3$ per mM per second) are those 
 
 The **Reference Values** page has a table of published values, with a reference for each row:
 
-- **Tissue type**: normal brain and CSF, brain lesions (the pathology is in the words of the source), fat, bone marrow and muscle, and blood
+- **Tissue type**: brain tissue and CSF, brain lesions and tumours (the pathology is in the words of the source), fat, bone marrow and muscle, and blood
 - **Species**: human, mouse and rat (the tissue types other than brain are human only)
 - **Condition**: in vivo and ex vivo (post-mortem, fixed and unfixed; blood samples in vitro)
 - **Field strength**: 1.5 T to 17.6 T

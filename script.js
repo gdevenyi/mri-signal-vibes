@@ -412,6 +412,9 @@ function presetCell(tr, preset, key, fieldT) {
         if (row.field_T !== null && row.field_T !== fieldT) extra.push(`${row.field_T} T`);
         if (row.condition !== 'in vivo') extra.push('in vitro');
         if (preset.srcNote && preset.srcNote[key]) extra.push(preset.srcNote[key]);
+        // The same marks as in the literature table
+        if (row.converted_from_rate && key !== 'ADC' && key !== 'Rho') extra.push('from rate');
+        if (!row.checked) extra.push('read once');
         if (extra.length) note.appendChild(document.createTextNode(` (${extra.join(', ')})`));
         note.title = `${row.tissue}${row.region_detail ? ', ' + row.region_detail : ''}; ${row.species}, ${row.condition}`
             + (row.field_T === null ? '' : `, ${row.field_T} T`) + `. ${row.citation}`;

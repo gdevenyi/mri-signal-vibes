@@ -7,8 +7,10 @@
  *   species, condition      - "human" | "mouse" | "rat"; "in vivo" | "ex vivo"
  *   field_T                 - field strength in tesla (1.5 to 18); null if the source text
  *                             does not give it (some ADC records)
- *   category                - "brain" (normal brain tissue and CSF), "lesion" (brain lesion),
- *                             "body" (fat, bone marrow, muscle) or "blood"
+ *   category                - "brain" (CSF and brain tissue that is not a focal lesion; this
+ *                             includes tissue of patients and donors with a disease, and the
+ *                             record says so), "lesion" (brain lesion or tumour), "body" (fat,
+ *                             bone marrow, muscle) or "blood"
  *   tissue, region_detail   - tissue class and the region in the words of the source
  *   T1_ms, T2_ms, T2s_ms    - relaxation times in ms, null if the source does not give them
  *   PD                      - proton density relative to water = 1, null if not given
