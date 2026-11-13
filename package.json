@@ -1,0 +1,21 @@
+{
+  "name": "mri-signal-vibes",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Web simulator of MRI signal intensity and contrast",
+  "packageManager": "pnpm@11.5.1",
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "lint": "pnpm run lint:js && pnpm run lint:css",
+    "lint:js": "eslint --max-warnings 0 .",
+    "lint:css": "stylelint style.css",
+    "test": "node --test",
+    "check": "pnpm run lint && pnpm run test"
+  },
+  "devDependencies": {
+    "eslint": "10.14.0",
+    "stylelint": "18.0.0"
+  }
+}

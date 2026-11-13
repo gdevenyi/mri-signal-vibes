@@ -114,6 +114,15 @@ Run the tests of the signal equations and of the reference data with Node.js (no
 node --test
 ```
 
+The linters (ESLint and Stylelint) need the development packages. Install them with pnpm, then run all checks:
+
+```sh
+pnpm install
+pnpm run check
+```
+
+GitHub Actions runs the same checks on each push and pull request (`.github/workflows/ci.yml`).
+
 Most tests are limit checks. For example, FISP must become SPGR when $T_2 \to 0$, and FSE with one echo must be equal to SE.
 
 ## Mathematical Formulations
