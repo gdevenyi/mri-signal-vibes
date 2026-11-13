@@ -1,74 +1,98 @@
 /**
- * MRI Signal Intensity Simulator Logic
- * Refactored for Multi-Tissue & Contrast
+ * MRI Signal Intensity Simulator: user interface
+ *
+ * The parameters and signal equations (`paramDefinitions`, `sequences`) are
+ * in sequences.js. The calculations of the interface (contrast agent,
+ * contrast analysis, CSV, state in the URL) are in logic.js.
  */
 
 // --- Configuration & Constants ---
 
-// Categorize parameters:
-// Sequence Params: TR, TE, TI, Theta
-// Tissue Params: T1, T2, T2s, Rho
-const paramType = {
-    'TR': 'seq', 'TE': 'seq', 'TI': 'seq', 'Theta': 'seq', 'ETL': 'seq', 'ESP': 'seq',
-    'T1': 'tissue', 'T2': 'tissue', 'T2s': 'tissue', 'Rho': 'tissue'
+const tissueColors = ['#bb86fc', '#03dac6', '#cf6679', '#ffb74d', '#64b5f6'];
+const MAX_TISSUES = 5;
+
+// Tissue parameters that each tissue card shows. ADC and the contrast agent
+// concentration are added only when they have an effect.
+const BASE_TISSUE_KEYS = ['Rho', 'T1', 'T2', 'T2s'];
+
+// Rounded, approximate values (see the Reference Values page)
+const REFERENCE_PRESETS = {
+    '1.5T': [
+        { name: 'White Matter', params: { T1: 700, T2: 80, T2s: 60, Rho: 0.73, ADC: 0.7 }, color: '#cf6679' },
+        { name: 'Gray Matter', params: { T1: 1000, T2: 100, T2s: 70, Rho: 0.83, ADC: 0.8 }, color: '#bb86fc' },
+        { name: 'CSF', params: { T1: 4000, T2: 2000, T2s: 1000, Rho: 1.0, ADC: 3.0 }, color: '#03dac6' }
+    ],
+    '3.0T': [
+        { name: 'White Matter', params: { T1: 950, T2: 95, T2s: 50, Rho: 0.73, ADC: 0.7 }, color: '#cf6679' },
+        { name: 'Gray Matter', params: { T1: 1450, T2: 95, T2s: 50, Rho: 0.83, ADC: 0.8 }, color: '#bb86fc' },
+        { name: 'CSF', params: { T1: 4000, T2: 2000, T2s: 300, Rho: 1.0, ADC: 3.0 }, color: '#03dac6' }
+    ],
+    '7.0T': [
+        { name: 'White Matter', params: { T1: 1300, T2: 60, T2s: 28, Rho: 0.73, ADC: 0.7 }, color: '#cf6679' },
+        { name: 'Gray Matter', params: { T1: 2000, T2: 53, T2s: 30, Rho: 0.83, ADC: 0.8 }, color: '#bb86fc' },
+        { name: 'CSF', params: { T1: 4500, T2: 1500, T2s: 100, Rho: 1.0, ADC: 3.0 }, color: '#03dac6' }
+    ]
 };
 
-// The signal equations (`sequences`) are in sequences.js
-
-const paramDefinitions = {
-    // Sequence
-    'TR': { label: 'TR (ms)', symbol: 'TR', unit: 'ms', min: 1, max: 5000, step: 10, default: 500 },
-    'TE': { label: 'TE (ms)', symbol: 'TE', unit: 'ms', min: 1, max: 300, step: 1, default: 20 },
-    'TI': { label: 'TI (ms)', symbol: 'TI', unit: 'ms', min: 0, max: 3000, step: 10, default: 150 },
-    'ETL': { label: 'ETL', symbol: 'ETL', unit: '', min: 1, max: 32, step: 1, default: 8 }, // Echo Train Length
-    'ESP': { label: 'ESP (ms)', symbol: 'ESP', unit: 'ms', min: 1, max: 100, step: 1, default: 10 }, // Echo Spacing
-    'Theta': { label: 'Flip Angle (°)', symbol: 'θ', unit: '°', min: 1, max: 180, step: 1, default: 90 },
-    // Tissue
-    'T1': { label: 'T1 (ms)', symbol: 'T1', unit: 'ms', min: 1, max: 3000, step: 10, default: 800 },
-    'T2': { label: 'T2 (ms)', symbol: 'T2', unit: 'ms', min: 1, max: 500, step: 1, default: 80 },
-    'T2s': { label: 'T2* (ms)', symbol: 'T2*', unit: 'ms', min: 1, max: 200, step: 1, default: 40 },
-    'Rho': { label: 'Proton Density', symbol: 'ρ', unit: '', min: 0, max: 1, step: 0.01, default: 1.0 }
-};
+// More tissues for the "Add preset tissue" list. These are rounded,
+// illustrative values for approximately 1.5 T. They are not from one source.
+const EXTRA_TISSUES = [
+    { name: 'Fat', params: { T1: 300, T2: 80, T2s: 40, Rho: 0.9, ADC: 0.1 } },
+    { name: 'Muscle', params: { T1: 1000, T2: 45, T2s: 30, Rho: 0.75, ADC: 1.5 } },
+    { name: 'Blood (arterial)', params: { T1: 1400, T2: 250, T2s: 150, Rho: 0.85, ADC: 2.0 } },
+    { name: 'Lesion (oedema)', params: { T1: 1500, T2: 200, T2s: 100, Rho: 0.9, ADC: 1.4 } }
+];
 
 // --- State ---
 let currentSeqId = 'SE';
 let currentMode = 'sim'; // 'sim' or 'ref'
-
-const REFERENCE_PRESETS = {
-    '1.5T': [
-        { name: 'White Matter', params: { T1: 700, T2: 80, T2s: 60, Rho: 0.73 }, color: '#cf6679' },
-        { name: 'Gray Matter', params: { T1: 1000, T2: 100, T2s: 70, Rho: 0.83 }, color: '#bb86fc' },
-        { name: 'CSF', params: { T1: 4000, T2: 2000, T2s: 1000, Rho: 1.0 }, color: '#03dac6' }
-    ],
-    '3.0T': [
-        { name: 'White Matter', params: { T1: 950, T2: 95, T2s: 50, Rho: 0.73 }, color: '#cf6679' },
-        { name: 'Gray Matter', params: { T1: 1450, T2: 95, T2s: 50, Rho: 0.83 }, color: '#bb86fc' },
-        { name: 'CSF', params: { T1: 4000, T2: 2000, T2s: 300, Rho: 1.0 }, color: '#03dac6' }
-    ],
-    '7.0T': [
-        { name: 'White Matter', params: { T1: 1300, T2: 60, T2s: 28, Rho: 0.73 }, color: '#cf6679' },
-        { name: 'Gray Matter', params: { T1: 2000, T2: 53, T2s: 30, Rho: 0.83 }, color: '#bb86fc' },
-        { name: 'CSF', params: { T1: 4500, T2: 1500, T2s: 100, Rho: 1.0 }, color: '#03dac6' }
-    ]
-};
-
 let currentSeqParams = {};
-// Initialize with 1.5T Default (Deep Copy to identify valid objects)
-let tissues = JSON.parse(JSON.stringify(REFERENCE_PRESETS['1.5T'])).map((t, i) => ({ ...t, id: i + 1 }));
-let nextTissueId = tissues.length + 1;
-const MAX_TISSUES = 5;
+let tissues = [];
+let nextTissueId = 1;
 let xAxisParam = 'TR'; // Default X-Axis
 let yAxisAuto = true;
 let magnitudeMode = false; // Show |S| for sequences with a signed signal
+// Contrast agent: each tissue has a concentration C, the relaxivities are global
+let agent = { on: false, r1: paramDefinitions.r1.default, r2: paramDefinitions.r2.default };
 let chartInstance = null;
-
-const tissueColors = ['#bb86fc', '#03dac6', '#cf6679', '#ffb74d', '#64b5f6'];
+let lastPlot = null;       // { xLabel, series } of the plot, for the CSV export
+let urlReady = false;      // false during start-up: do not write the URL then
+let urlTimer = null;
+let lastWrittenHash = '';
 
 function escapeHtml(str) {
     return String(str).replace(/[&<>"']/g, (c) => ({
         '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
     }[c]));
 }
+
+// All tissue parameters, with the default for each one that `params` does not give
+function completeTissueParams(params) {
+    const full = {};
+    Object.keys(paramDefinitions).forEach(key => {
+        if (paramDefinitions[key].type === 'tissue') {
+            full[key] = params[key] !== undefined ? params[key] : paramDefinitions[key].default;
+        }
+    });
+    return full;
+}
+
+function freeColor() {
+    const usedColors = tissues.map(t => t.color);
+    return tissueColors.find(c => !usedColors.includes(c)) || tissueColors[tissues.length % tissueColors.length];
+}
+
+function setTissues(list) {
+    tissues = list.map((t, i) => ({
+        id: i + 1,
+        name: t.name,
+        color: t.color,
+        params: completeTissueParams(t.params)
+    }));
+    nextTissueId = tissues.length + 1;
+}
+
+setTissues(REFERENCE_PRESETS['1.5T']);
 
 // --- Initialization ---
 function init() {
@@ -83,8 +107,20 @@ function init() {
         });
     });
 
-    // Add Tissue Button
-    document.getElementById('add-tissue-btn').addEventListener('click', addTissue);
+    // Add Tissue Button and the list of preset tissues
+    document.getElementById('add-tissue-btn').addEventListener('click', () => addTissue());
+    const presetSelect = document.getElementById('add-preset-select');
+    EXTRA_TISSUES.forEach((t, i) => {
+        const opt = document.createElement('option');
+        opt.value = String(i);
+        opt.textContent = t.name;
+        presetSelect.appendChild(opt);
+    });
+    presetSelect.addEventListener('change', (e) => {
+        const preset = EXTRA_TISSUES[Number(e.target.value)];
+        if (preset) addTissue(preset);
+        e.target.value = '';
+    });
 
     // Setup Plot Control
     const xSelect = document.getElementById('x-axis-select');
@@ -111,16 +147,44 @@ function init() {
         updateUI();
     });
 
+    // Contrast agent option
+    document.getElementById('agent-chk').addEventListener('change', (e) => {
+        agent.on = e.target.checked;
+        buildControls();
+    });
+
     [yMinInput, yMaxInput].forEach(inp => {
         inp.addEventListener('change', () => {
             if (!yAxisAuto) updateUI();
         });
     });
 
+    // Export and link
+    document.getElementById('export-csv-btn').addEventListener('click', exportCsv);
+    document.getElementById('export-png-btn').addEventListener('click', exportPng);
+    document.getElementById('copy-link-btn').addEventListener('click', copyLink);
+
     initReferenceTable();
 
-    setSequence('SE');
+    // A link can contain the full state of the simulator
+    const linked = readUrlState();
+    if (linked) {
+        applyState(linked);
+    } else {
+        setSequence('SE');
+    }
     updateView();
+
+    window.addEventListener('hashchange', () => {
+        // Ignore the changes that this page made
+        if (window.location.hash === lastWrittenHash) return;
+        const state = readUrlState();
+        if (state) {
+            applyState(state);
+            updateView();
+        }
+    });
+    urlReady = true;
 }
 
 // --- Literature reference table (data in reference-data.js) ---
@@ -299,22 +363,21 @@ function referenceMissingParams(r) {
 function addReferenceTissue(r) {
     if (tissues.length >= MAX_TISSUES) return false;
 
-    const params = {
-        T1: r.T1_ms !== null ? r.T1_ms : paramDefinitions.T1.default,
-        T2: r.T2_ms !== null ? r.T2_ms : paramDefinitions.T2.default,
-        T2s: r.T2s_ms !== null ? r.T2s_ms : paramDefinitions.T2s.default,
-        Rho: (r.PD !== null && r.PD > 0 && r.PD <= 1) ? r.PD : paramDefinitions.Rho.default
-    };
+    const params = completeTissueParams({
+        T1: r.T1_ms !== null ? r.T1_ms : undefined,
+        T2: r.T2_ms !== null ? r.T2_ms : undefined,
+        T2s: r.T2s_ms !== null ? r.T2s_ms : undefined,
+        Rho: (r.PD !== null && r.PD > 0 && r.PD <= 1) ? r.PD : undefined
+    });
     // A default T2* must not be longer than a T2 from the source
-    if (r.T2s_ms === null && params.T2s > params.T2) params.T2s = params.T2;
+    limitT2s(params);
 
     const missing = referenceMissingParams(r);
-    const usedColors = tissues.map(t => t.color);
     tissues.push({
         id: nextTissueId++,
         name: `${r.tissue}, ${r.species} ${r.condition} ${r.field_T}T` + (missing.length ? ` (default ${missing.join(', ')})` : ''),
         params: params,
-        color: tissueColors.find(c => !usedColors.includes(c)) || tissueColors[tissues.length % tissueColors.length]
+        color: freeColor()
     });
     buildControls();
     return true;
@@ -322,7 +385,8 @@ function addReferenceTissue(r) {
 
 // --- Core Logic ---
 
-function setSequence(seqId) {
+// seqParams and xParam are optional: they come from a link
+function setSequence(seqId, seqParams, xParam) {
     currentSeqId = seqId;
     currentMode = 'sim';
 
@@ -335,13 +399,20 @@ function setSequence(seqId) {
     const seq = sequences[seqId];
     document.getElementById('current-sequence-title').textContent = seq.name;
     document.getElementById('equation-display').textContent = seq.equationStr;
+    document.getElementById('notes-display').textContent = seq.notes || '';
 
     // Display citation and URL
     const citationDisplay = document.getElementById('citation-display');
+    citationDisplay.textContent = seq.citation || '';
     if (seq.url) {
-        citationDisplay.innerHTML = `${seq.citation || ''} <br> <a href="${seq.url}" target="_blank" rel="noopener" style="color:var(--primary);text-decoration:none;">[View Source Equation]</a>`;
-    } else {
-        citationDisplay.textContent = seq.citation || '';
+        citationDisplay.appendChild(document.createElement('br'));
+        const link = document.createElement('a');
+        link.href = seq.url;
+        link.target = '_blank';
+        link.rel = 'noopener';
+        link.className = 'source-link';
+        link.textContent = '[View Source]';
+        citationDisplay.appendChild(link);
     }
 
     // Magnitude option
@@ -350,9 +421,10 @@ function setSequence(seqId) {
     // Initialize Seq Params
     currentSeqParams = {};
     seq.params.forEach(pKey => {
-        if (paramType[pKey] === 'seq') {
+        if (paramDefinitions[pKey].type === 'seq') {
             const seqDefault = seq.defaults ? seq.defaults[pKey] : undefined;
             currentSeqParams[pKey] = seqDefault !== undefined ? seqDefault : paramDefinitions[pKey].default;
+            if (seqParams && seqParams[pKey] !== undefined) currentSeqParams[pKey] = seqParams[pKey];
         }
     });
 
@@ -361,13 +433,16 @@ function setSequence(seqId) {
         window.MathJax.typesetPromise([document.getElementById('equation-display')]).catch((err) => console.log('MathJax error:', err));
     }
 
-    // Determine default X-Axis if current one is not valid for this sequence OR is a tissue param
-    // We strictly want only seq params now.
-    const isSeqParam = paramType[xAxisParam] === 'seq';
-    if (!seq.params.includes(xAxisParam) || !isSeqParam) {
+    // X-axis: from the link, or the default of the sequence, or the current
+    // one if this sequence has it
+    const isSeqParam = (k) => seq.params.includes(k) && paramDefinitions[k].type === 'seq';
+    if (xParam && isSeqParam(xParam)) {
+        xAxisParam = xParam;
+    } else if (seq.defaultX) {
+        xAxisParam = seq.defaultX;
+    } else if (!isSeqParam(xAxisParam)) {
         if (seq.params.includes('TR')) xAxisParam = 'TR';
-        else if (seq.params.includes('TI')) xAxisParam = 'TI';
-        else xAxisParam = seq.params.find(k => paramType[k] === 'seq') || 'TR';
+        else xAxisParam = seq.params.find(k => paramDefinitions[k].type === 'seq') || 'TR';
     }
 
     buildControls();
@@ -378,17 +453,13 @@ function setSequence(seqId) {
 window.loadPreset = function (strength) {
     if (!REFERENCE_PRESETS[strength]) return;
 
-    // Replace tissues with deep copy of preset
-    tissues = JSON.parse(JSON.stringify(REFERENCE_PRESETS[strength])).map((t, i) => ({ ...t, id: i + 1 }));
-    nextTissueId = tissues.length + 1;
+    setTissues(REFERENCE_PRESETS[strength]);
 
     // Switch back to simulator
     currentMode = 'sim';
     updateView();
     buildControls();
-
-    // Optional: Toast or alert? Switching view is clear enough.
-}
+};
 
 function setReferenceMode() {
     currentMode = 'ref';
@@ -423,6 +494,21 @@ function updateView() {
     }
 }
 
+// Set the scanner settings from a result of nullParams or nullPair
+function applyNullResult(result) {
+    Object.keys(result).forEach(key => {
+        currentSeqParams[key] = Math.round(result[key]);
+    });
+    buildControls();
+}
+
+// Show a text on a button for a short time
+function flashButton(btn, text) {
+    const original = btn.textContent;
+    btn.textContent = text;
+    setTimeout(() => { btn.textContent = original; }, 1500);
+}
+
 function buildControls() {
     const seq = sequences[currentSeqId];
     const seqContainer = document.getElementById('seq-params-container');
@@ -436,7 +522,7 @@ function buildControls() {
     // --- X-Axis Select ---
     // Allow ONLY sequence params
     seq.params.forEach(pKey => {
-        if (paramType[pKey] === 'seq') {
+        if (paramDefinitions[pKey].type === 'seq') {
             const opt = document.createElement('option');
             opt.value = pKey;
             opt.textContent = paramDefinitions[pKey].label;
@@ -447,7 +533,7 @@ function buildControls() {
 
     // --- Sequence Sliders ---
     seq.params.forEach(pKey => {
-        if (paramType[pKey] === 'seq') {
+        if (paramDefinitions[pKey].type === 'seq') {
             createSlider(seqContainer, pKey, currentSeqParams[pKey], (val) => {
                 currentSeqParams[pKey] = val;
                 updateChart();
@@ -455,7 +541,38 @@ function buildControls() {
         }
     });
 
+    // --- Contrast agent: relaxivities ---
+    if (agent.on) {
+        ['r1', 'r2'].forEach(pKey => {
+            createSlider(seqContainer, pKey, agent[pKey], (val) => {
+                agent[pKey] = val;
+                updateChart();
+            }, false);
+        });
+    }
+
+    // --- Null two tissues together (DIR) ---
+    if (seq.nullPair && tissues.length >= 2) {
+        const pairBtn = document.createElement('button');
+        pairBtn.className = 'tool-btn';
+        pairBtn.textContent = 'Null tissues 1 + 2';
+        pairBtn.title = 'Set the inversion times so that the first two tissues give no signal';
+        pairBtn.addEventListener('click', () => {
+            const result = seq.nullPair(currentSeqParams, effectiveParams(tissues[0]), effectiveParams(tissues[1]));
+            if (result === null) {
+                flashButton(pairBtn, 'No solution');
+                return;
+            }
+            applyNullResult(result);
+        });
+        seqContainer.appendChild(pairBtn);
+    }
+
     // --- Tissue Cards ---
+    const tissueKeys = [...BASE_TISSUE_KEYS];
+    if (seq.params.includes('ADC')) tissueKeys.push('ADC');
+    if (agent.on) tissueKeys.push('C');
+
     tissues.forEach((tissue) => {
         const card = document.createElement('div');
         card.className = 'tissue-card';
@@ -467,6 +584,7 @@ function buildControls() {
         const nameInput = document.createElement('input');
         nameInput.className = 'tissue-name-input';
         nameInput.value = tissue.name;
+        nameInput.maxLength = MAX_NAME_LENGTH;
         nameInput.style.color = tissue.color;
         nameInput.addEventListener('change', (e) => {
             tissue.name = e.target.value;
@@ -481,22 +599,20 @@ function buildControls() {
 
         header.appendChild(nameInput);
 
-        // Null button: set TI to the null point of this tissue
-        if (seq.nullTI) {
+        // Null button: set the inversion time to the null point of this tissue
+        if (seq.nullParams) {
             const nullBtn = document.createElement('button');
             nullBtn.className = 'tissue-null-btn';
             nullBtn.textContent = 'Null';
-            nullBtn.title = 'Set TI to the null point of this tissue';
+            nullBtn.title = 'Set the inversion time to the null point of this tissue';
             nullBtn.addEventListener('click', () => {
-                const ti = seq.nullTI(currentSeqParams, tissue.params);
-                if (ti === null) {
-                    // No null point at this TR and TE (TR is too short)
-                    nullBtn.textContent = 'No null';
-                    setTimeout(() => { nullBtn.textContent = 'Null'; }, 1500);
+                const result = seq.nullParams(currentSeqParams, effectiveParams(tissue));
+                if (result === null) {
+                    // No null point with these settings
+                    flashButton(nullBtn, 'No null');
                     return;
                 }
-                currentSeqParams.TI = Math.round(ti);
-                buildControls();
+                applyNullResult(result);
             });
             header.appendChild(nullBtn);
         }
@@ -506,13 +622,19 @@ function buildControls() {
 
         card.appendChild(header);
 
-        // Tissue Param Sliders - Always show all 4
-        const tissueKeys = ['Rho', 'T1', 'T2', 'T2s'];
+        const idPrefix = `tissue${tissue.id}-`;
         tissueKeys.forEach(pKey => {
             createSlider(card, pKey, tissue.params[pKey], (val) => {
                 tissue.params[pKey] = val;
+                let corrected;
+                // T2* cannot be longer than T2
+                if ((pKey === 'T2' || pKey === 'T2s') && limitT2s(tissue.params)) {
+                    if (pKey === 'T2s') corrected = tissue.params.T2s;
+                    else syncSlider(idPrefix, 'T2s', tissue.params.T2s);
+                }
                 updateChart();
-            }, true, `tissue${tissue.id}-`); // compact mode
+                return corrected;
+            }, true, idPrefix); // compact mode
         });
 
         tissueContainer.appendChild(card);
@@ -521,11 +643,23 @@ function buildControls() {
     updateUI();
 }
 
+// Show a value that the program changed on a slider and its number input
+function syncSlider(idPrefix, pKey, value) {
+    const inp = document.getElementById(`${idPrefix}input-${pKey}`);
+    const sld = document.getElementById(`${idPrefix}slider-${pKey}`);
+    if (inp) {
+        inp.value = value;
+        inp.dataset.last = value;
+    }
+    if (sld) sld.value = value;
+}
+
+// onChange can return a corrected value. The slider then shows that value.
 function createSlider(container, pKey, initVal, onChange, isCompact, idPrefix = '') {
     const def = paramDefinitions[pKey];
 
     // A preset value can be larger than the slider range (for example CSF T1).
-    if (pKey !== 'Theta' && pKey !== 'Rho' && initVal > def.max) {
+    if (!def.fixedRange && initVal > def.max) {
         def.max = Math.ceil(initVal * 1.5);
     }
 
@@ -550,6 +684,8 @@ function createSlider(container, pKey, initVal, onChange, isCompact, idPrefix = 
     valInput.min = gridMin;
     valInput.max = def.max;
     valInput.step = def.step;
+    // The last good value, for when the text is empty or not a number
+    valInput.dataset.last = initVal;
 
     labelRow.appendChild(nameSpan);
     labelRow.appendChild(valInput);
@@ -563,16 +699,23 @@ function createSlider(container, pKey, initVal, onChange, isCompact, idPrefix = 
     slider.step = def.step;
     slider.value = initVal;
 
-    let lastVal = initVal;
+    const commit = (newVal) => {
+        valInput.dataset.last = newVal;
+        const corrected = onChange(newVal);
+        if (corrected !== undefined && corrected !== newVal) {
+            valInput.value = corrected;
+            slider.value = corrected;
+            valInput.dataset.last = corrected;
+        }
+    };
 
     // Sync Slider -> Input
     slider.addEventListener('input', (e) => {
         const newVal = Math.max(parseFloat(e.target.value), def.min);
         valInput.value = newVal;
-        lastVal = newVal;
 
-        // Infinite Range Logic: Bi-directional scaling (except Theta and Rho)
-        if (pKey !== 'Theta' && pKey !== 'Rho') {
+        // Bi-directional scaling of the range (not for fixed ranges)
+        if (!def.fixedRange) {
             const currentMax = parseFloat(slider.max);
             let newMax = currentMax;
 
@@ -580,9 +723,8 @@ function createSlider(container, pKey, initVal, onChange, isCompact, idPrefix = 
             if (newVal >= currentMax * 0.90) {
                 newMax = Math.ceil(currentMax * 1.1);
             }
-            // Shrink gently if pulling away (< 70%) to keep detail, 
-            // but keep at least ~20% headroom and don't drop below original default minimums (e.g. 100 or so? handled by logic)
-            // We ensure newMax is at least newVal * 1.2 to give space to move right again.
+            // Shrink gently if pulling away (< 70%) to keep detail,
+            // but keep at least ~20% headroom to move right again.
             else if (newVal < currentMax * 0.70) {
                 const proposedMax = Math.ceil(currentMax * 0.95);
                 if (proposedMax > newVal * 1.2) {
@@ -597,7 +739,7 @@ function createSlider(container, pKey, initVal, onChange, isCompact, idPrefix = 
             }
         }
 
-        onChange(newVal);
+        commit(newVal);
     });
 
     // Sync Input -> Slider
@@ -606,12 +748,12 @@ function createSlider(container, pKey, initVal, onChange, isCompact, idPrefix = 
 
         // Empty or invalid text: go back to the last good value
         if (!Number.isFinite(newVal)) {
-            valInput.value = lastVal;
+            valInput.value = valInput.dataset.last;
             return;
         }
 
-        // Auto-expand max if input > max (except Theta and Rho)
-        if (pKey !== 'Theta' && pKey !== 'Rho' && newVal > parseFloat(slider.max)) {
+        // Auto-expand max if input > max (not for fixed ranges)
+        if (!def.fixedRange && newVal > parseFloat(slider.max)) {
             const newMax = Math.ceil(newVal * 1.5);
             slider.max = newMax;
             valInput.max = newMax;
@@ -620,13 +762,12 @@ function createSlider(container, pKey, initVal, onChange, isCompact, idPrefix = 
 
         // Clamp
         if (newVal < def.min) newVal = def.min;
-        // Hard clamp for Theta and Rho
-        if ((pKey === 'Theta' || pKey === 'Rho') && newVal > def.max) newVal = def.max;
+        if (def.fixedRange && newVal > def.max) newVal = def.max;
+        if (def.integer) newVal = Math.round(newVal);
 
         valInput.value = newVal;
         slider.value = newVal;
-        lastVal = newVal;
-        onChange(newVal);
+        commit(newVal);
     });
 
     group.appendChild(labelRow);
@@ -634,17 +775,16 @@ function createSlider(container, pKey, initVal, onChange, isCompact, idPrefix = 
     container.appendChild(group);
 }
 
-function addTissue() {
+// Without an argument: a new tissue with default values.
+// With a preset ({ name, params }): a copy of that preset.
+function addTissue(preset) {
     if (tissues.length >= MAX_TISSUES) return;
-    // Use the first colour that no tissue has at this time
-    const usedColors = tissues.map(t => t.color);
-    const color = tissueColors.find(c => !usedColors.includes(c)) || tissueColors[tissues.length % tissueColors.length];
     const id = nextTissueId++;
     tissues.push({
         id: id,
-        name: `Tissue ${id}`,
-        params: { T1: 800, T2: 80, T2s: 40, Rho: 1.0 },
-        color: color
+        name: preset ? preset.name : `Tissue ${id}`,
+        params: completeTissueParams(preset ? preset.params : {}),
+        color: freeColor()
     });
     buildControls(); // Rebuild to show new tissue
 }
@@ -662,69 +802,70 @@ function updateUI() {
 function enforceConstraints() {
     // Constraint: TE <= TR
     if (currentSeqParams.TR !== undefined && currentSeqParams.TE !== undefined) {
-        // If both checks are relevant (not hidden by X-axis choice logic, though validation applies to data)
         // If TR or TE is the X-Axis, we can't easily "clamp" the slider since it defines the range/step.
         // We only clamp STATIC parameters here.
-
         if (xAxisParam !== 'TR' && xAxisParam !== 'TE') {
             if (currentSeqParams.TE > currentSeqParams.TR) {
                 currentSeqParams.TE = currentSeqParams.TR;
-                // Update UI
-                const inp = document.getElementById('input-TE');
-                const sld = document.getElementById('slider-TE');
-                if (inp) inp.value = currentSeqParams.TE;
-                if (sld) sld.value = currentSeqParams.TE;
+                syncSlider('', 'TE', currentSeqParams.TE);
             }
         }
     }
+}
+
+// Tissue parameters with the effect of the contrast agent
+function effectiveParams(tissue) {
+    return agent.on ? applyContrastAgent(tissue.params, agent.r1, agent.r2) : { ...tissue.params };
+}
+
+// A vertical line on the plot. Marker lines are not in the legend or the tooltip.
+function markerLine(label, x, minY, maxY, color, dash) {
+    return {
+        label: label,
+        data: [{ x: x, y: minY }, { x: x, y: maxY }],
+        borderColor: color,
+        borderDash: dash,
+        borderWidth: 1,
+        pointRadius: 0,
+        fill: false,
+        isMarker: true
+    };
 }
 
 function updateChart() {
     enforceConstraints();
     const seq = sequences[currentSeqId];
     const def = paramDefinitions[xAxisParam];
-    const isSeqParam = paramType[xAxisParam] === 'seq';
 
-    // Generate data points
-    let steps = 2048;
-
+    // X range: the full range of the parameter, or from the minimum to the
+    // slider value
+    let plotMin = def.min;
     let plotMax = def.max;
-    // User request: Use slider value as max plot value (except Theta)
-    if (xAxisParam !== 'Theta' && isSeqParam) {
-        plotMax = currentSeqParams[xAxisParam];
-        // Ensure plotMax is not below min (though slider limits should prevent this)
-        if (plotMax < def.min) plotMax = def.min;
+    if (!def.fullAxis) {
+        plotMax = Math.max(currentSeqParams[xAxisParam], def.min);
     }
+    const range = plotMax - plotMin;
 
-    const range = plotMax - def.min;
-
-    // ETL is a count of echoes: use integer values only
-    if (xAxisParam === 'ETL') steps = Math.max(1, Math.round(range));
+    // A count (ETL, readouts) has integer values only
+    let steps = 2048;
+    if (def.integer) steps = Math.max(1, Math.round(range));
 
     const datasets = [];
+    const series = []; // [{ name, color, xs, ys }]
 
-    // Arrays to store signals for contrast calc (if valid)
-    // We only contrast the first two tissues
-    const signalData = []; // [ [y1 values], [y2 values] ]
-
-    tissues.forEach((tissue, tIdx) => {
+    tissues.forEach((tissue) => {
         const points = [];
-        const yValues = [];
+        const tP = effectiveParams(tissue);
 
         for (let i = 0; i <= steps; i++) {
-            let xVal = def.min + (range * (i / steps));
-            if (xAxisParam === 'ETL') xVal = Math.round(xVal);
+            let xVal = plotMin + (range * (i / steps));
+            if (def.integer) xVal = Math.round(xVal);
 
-            // Build current call params
-            let sP = { ...currentSeqParams };
-            let tP = { ...tissue.params };
-
-            if (isSeqParam) sP[xAxisParam] = xVal;
-            else tP[xAxisParam] = xVal;
+            const sP = { ...currentSeqParams };
+            sP[xAxisParam] = xVal;
 
             let yVal = 0;
-            // Dynamic Constraint: Signal is null if TE > TR (for relevant sequences)
-            // or if the sequence timing is not possible (seq.valid)
+            // Signal is null if TE > TR or if the sequence timing is not possible
             if (sP.TR !== undefined && sP.TE !== undefined && sP.TE > sP.TR) {
                 yVal = null;
             } else if (seq.valid && !seq.valid(sP)) {
@@ -735,10 +876,9 @@ function updateChart() {
                 else if (seq.signed && magnitudeMode) yVal = Math.abs(yVal);
             }
             points.push({ x: xVal, y: yVal });
-            yValues.push(yVal);
         }
 
-        if (tIdx < 10) signalData.push({ xs: points.map(p => p.x), ys: yValues, name: tissue.name, color: tissue.color }); // Store up to 10 for logic (limit is 5 anyway)
+        series.push({ name: tissue.name, color: tissue.color, xs: points.map(p => p.x), ys: points.map(p => p.y) });
 
         datasets.push({
             label: tissue.name,
@@ -748,146 +888,127 @@ function updateChart() {
             borderWidth: 2,
             pointRadius: 0,
             fill: false,
-            tension: 0.4
+            tension: def.integer ? 0 : 0.4
         });
     });
 
-    // Calculate Contrast (Multi-Tissue)
-    // We want to calculate AND display contrast for EVERY pair.
-    let pairwiseResults = [];
-    let hasContrast = false;
+    lastPlot = { xLabel: def.label, series: series };
 
-    if (signalData.length >= 2) {
-        hasContrast = true;
+    // Y range of the signals, for the marker lines
+    const allYs = series.flatMap(s => s.ys).filter(y => y !== null);
+    const hasValidPoints = allYs.length > 0;
+    let minY = hasValidPoints ? Math.min(...allYs) : 0;
+    let maxY = hasValidPoints ? Math.max(...allYs) : 1;
+    if (minY === maxY) { minY -= 0.1; maxY += 0.1; }
 
-        // Iterate unique pairs
-        for (let i = 0; i < signalData.length; i++) {
-            for (let j = i + 1; j < signalData.length; j++) {
-                const t1 = signalData[i];
-                const t2 = signalData[j];
-                const xs = t1.xs;
-                const s1 = t1.ys;
-                const s2 = t2.ys;
+    const unit = def.unit || '';
+    const unitStr = unit ? ` ${unit}` : '';
+    const atStr = (x) => (x === null ? 'n/a' : `@ ${Math.round(x)}${unitStr}`);
 
-                // X positions stay null if no maximum is found
-                let pMaxDiff = 0, pMaxDiffX = null;
-                let pMaxRatio = 1, pMaxRatioX = null;
-
-                for (let k = 0; k < s1.length; k++) {
-                    const v1 = s1[k];
-                    const v2 = s2[k];
-
-                    // Handling nulls
-                    if (v1 === null || v2 === null) continue;
-
-                    // Diff
-                    const diff = Math.abs(v1 - v2);
-                    if (diff > pMaxDiff) {
-                        pMaxDiff = diff;
-                        pMaxDiffX = xs[k];
-                    }
-
-                    // Ratio
-                    if (Math.abs(v2) > 0.001 && Math.abs(v1) > 0.001) {
-                        const r = Math.max(Math.abs(v1 / v2), Math.abs(v2 / v1));
-                        if (r > pMaxRatio) {
-                            pMaxRatio = r;
-                            pMaxRatioX = xs[k];
-                        }
-                    }
-                }
-
-                pairwiseResults.push({
-                    name: `${t1.name} vs ${t2.name}`,
-                    diff: pMaxDiff,
-                    diffX: pMaxDiffX,
-                    ratio: pMaxRatio,
-                    ratioX: pMaxRatioX,
-                    color: t1.color // Maybe use one of the colors for line identification?
-                });
-            }
-        }
-    }
-
-    // Update Contrast UI
     const contrastBox = document.getElementById('contrast-info');
-    if (hasContrast && pairwiseResults.length > 0) {
-        let html = '';
+    let html = '';
 
-        // Find Y range for lines
-        let allYs = signalData.flatMap(d => d.ys).filter(y => y !== null);
-        let minY = Math.min(...allYs);
-        let maxY = Math.max(...allYs);
-        if (minY === maxY) { minY -= 0.1; maxY += 0.1; }
-        if (!isFinite(minY)) minY = 0;
-        if (!isFinite(maxY)) maxY = 1;
+    if (!hasValidPoints) {
+        html = '<span style="color:#aaa">No valid signal for these settings. Check that TE &le; TR and that the inversion times and the echo or readout train fit in TR.</span>';
+    } else if (series.length >= 2) {
+        // Contrast for each pair of tissues. The efficiency is the signal
+        // difference for each unit of scan time (difference / sqrt(TR)).
+        const hasTR = currentSeqParams.TR !== undefined;
+        const trAt = hasTR
+            ? (k) => (xAxisParam === 'TR' ? series[0].xs[k] : currentSeqParams.TR)
+            : null;
+        const results = analyzeContrast(series, trAt);
 
-        const hasValidPoints = allYs.length > 0;
-        if (!hasValidPoints) {
-            html = '<span style="color:#aaa">No valid signal for these settings. Check that TE &le; TR and that the echo train fits between 0 and TR.</span>';
-        }
-
-        const unit = paramDefinitions[xAxisParam].unit || '';
-        const unitStr = unit ? ` ${unit}` : '';
-        const atStr = (x) => (x === null ? 'n/a' : `@ ${Math.round(x)}${unitStr}`);
-
-        pairwiseResults.forEach(res => {
-            if (!hasValidPoints) return;
-
-            // Add UI Block
+        results.forEach(res => {
+            const effHtml = hasTR ? `
+                    <div style="font-size: 0.9rem; color: #81c784;" title="Signal difference divided by the square root of TR in seconds: the contrast for each unit of scan time">
+                        Max Diff/&radic;TR: <span style="font-weight:600;">${res.eff.toFixed(3)}</span>
+                        <span style="font-size:0.7em; opacity:0.7">${atStr(res.effX)}</span>
+                    </div>` : '';
             html += `
-                <div class="stat-item" style="border-left: 3px solid ${res.color}; padding-left: 0.5rem;">
+                <div class="stat-item" style="border-left: 3px solid ${escapeHtml(res.color)}; padding-left: 0.5rem;">
                     <span class="stat-label" style="color: #fff; font-weight:700;">${escapeHtml(res.name)}</span>
                     <div style="font-size: 0.9rem; color: #ddd;">
-                        Max Diff: <span style="color: white; font-weight:600;">${res.diff.toFixed(3)}</span> 
+                        Max Diff: <span style="color: white; font-weight:600;">${res.diff.toFixed(3)}</span>
                         <span style="font-size:0.7em; opacity:0.7">${atStr(res.diffX)}</span>
                     </div>
                     <div style="font-size: 0.9rem; color: #ffeb3b;">
                         Max Ratio: <span style="font-weight:600;">${res.ratio.toFixed(2)}</span>
                         <span style="font-size:0.7em; opacity:0.7">${atStr(res.ratioX)}</span>
-                    </div>
+                    </div>${effHtml}
                 </div>
             `;
 
-            // Marker lines: Max Diff in white (dashed), Max Ratio in yellow (dotted).
-            // No line if no maximum was found.
+            // Marker lines: Max Diff in white (dashed), Max Ratio in yellow
+            // (dotted). No line if no maximum was found. With a fixed TR the
+            // efficiency maximum is at the Max Diff position, so its line
+            // (green) is only there when TR is the X-axis.
             if (res.diffX !== null) {
-                datasets.push({
-                    label: `Max Diff (${res.name})`,
-                    data: [{ x: res.diffX, y: minY }, { x: res.diffX, y: maxY }],
-                    borderColor: 'rgba(255, 255, 255, 0.7)',
-                    borderDash: [5, 5],
-                    borderWidth: 1,
-                    pointRadius: 0,
-                    fill: false
-                });
+                datasets.push(markerLine(`Max Diff (${res.name})`, res.diffX, minY, maxY, 'rgba(255, 255, 255, 0.7)', [5, 5]));
             }
-
             if (res.ratioX !== null) {
-                datasets.push({
-                    label: `Max Ratio (${res.name})`,
-                    data: [{ x: res.ratioX, y: minY }, { x: res.ratioX, y: maxY }],
-                    borderColor: 'rgba(255, 235, 59, 0.7)', // Yellowish
-                    borderDash: [2, 4],
-                    borderWidth: 1,
-                    pointRadius: 0,
-                    fill: false
-                });
+                datasets.push(markerLine(`Max Ratio (${res.name})`, res.ratioX, minY, maxY, 'rgba(255, 235, 59, 0.7)', [2, 4]));
+            }
+            if (xAxisParam === 'TR' && res.effX !== null) {
+                datasets.push(markerLine(`Max Diff/√TR (${res.name})`, res.effX, minY, maxY, 'rgba(129, 199, 132, 0.8)', [8, 3]));
             }
         });
-
-        contrastBox.innerHTML = html;
-
     } else {
-        contrastBox.innerHTML = '<span style="color:#aaa">Add at least 2 tissues for contrast analysis.</span>';
+        html = '<span style="color:#aaa">Add at least 2 tissues for contrast analysis.</span>';
+    }
+
+    // Ernst angle of each tissue (spoiled gradient echo sequences)
+    if (seq.ernst && hasValidPoints) {
+        const parts = tissues.map(tissue => {
+            const angle = ernstAngle(currentSeqParams.TR, effectiveParams(tissue).T1);
+            if (xAxisParam === 'Theta') {
+                datasets.push(markerLine(`Ernst angle (${tissue.name})`, angle, minY, maxY, tissue.color, [1, 3]));
+            }
+            return `<span style="color:${escapeHtml(tissue.color)}">${escapeHtml(tissue.name)}: ${angle.toFixed(1)}&deg;</span>`;
+        });
+        const trNote = xAxisParam === 'TR' ? ' (at the TR of the slider)' : '';
+        html += `<div class="stat-wide">Ernst angle${trNote}: ${parts.join(', ')}</div>`;
+    }
+
+    if (datasets.some(d => d.isMarker)) {
+        html += '<div class="stat-wide stat-muted">Vertical lines: white = Max Diff, yellow = Max Ratio'
+            + (xAxisParam === 'TR' ? ', green = Max Diff/&radic;TR' : '')
+            + ((seq.ernst && xAxisParam === 'Theta') ? ', tissue colour = Ernst angle' : '')
+            + '.</div>';
+    }
+
+    contrastBox.innerHTML = html;
+
+    // If the first part of the X range has no valid signal (for example a
+    // readout train that does not fit), the plot starts at the first valid point
+    const validXs = series.flatMap(s => s.xs.filter((x, k) => s.ys[k] !== null));
+    const firstValidX = validXs.length ? Math.min(...validXs) : plotMin;
+    const xMin = firstValidX > plotMin ? firstValidX : plotMin;
+    // No range (the slider is at its minimum): let the chart find the limits
+    const xLimits = range > 0 ? { min: xMin, max: plotMax } : { min: undefined, max: undefined };
+
+    drawChart(datasets, def.label, (seq.signed && magnitudeMode) ? 'Signal Intensity (magnitude)' : 'Signal Intensity', xLimits);
+    scheduleUrlUpdate();
+}
+
+// The chart is made one time. After that, only its data and labels change.
+function drawChart(datasets, xLabel, yLabel, xLimits) {
+    const yMin = yAxisAuto ? undefined : parseFloat(document.getElementById('y-min-input').value);
+    const yMax = yAxisAuto ? undefined : parseFloat(document.getElementById('y-max-input').value);
+
+    if (chartInstance) {
+        chartInstance.data.datasets = datasets;
+        chartInstance.options.scales.x.title.text = xLabel;
+        chartInstance.options.scales.x.min = xLimits.min;
+        chartInstance.options.scales.x.max = xLimits.max;
+        chartInstance.options.scales.y.title.text = yLabel;
+        chartInstance.options.scales.y.min = Number.isFinite(yMin) ? yMin : undefined;
+        chartInstance.options.scales.y.max = Number.isFinite(yMax) ? yMax : undefined;
+        chartInstance.update('none');
+        return;
     }
 
     const ctx = document.getElementById('signalChart').getContext('2d');
-
-    if (chartInstance) {
-        chartInstance.destroy();
-    }
-
     chartInstance = new Chart(ctx, {
         type: 'line',
         data: { datasets: datasets },
@@ -902,31 +1023,137 @@ function updateChart() {
             scales: {
                 x: {
                     type: 'linear',
-                    title: { display: true, text: def.label, color: '#a0a0a0' },
+                    min: xLimits.min,
+                    max: xLimits.max,
+                    title: { display: true, text: xLabel, color: '#a0a0a0' },
                     grid: { color: '#333' },
                     ticks: { color: '#a0a0a0' }
                 },
                 y: {
-                    title: { display: true, text: (seq.signed && magnitudeMode) ? 'Signal Intensity (magnitude)' : 'Signal Intensity', color: '#a0a0a0' },
+                    title: { display: true, text: yLabel, color: '#a0a0a0' },
                     grid: { color: '#333' },
                     ticks: { color: '#a0a0a0' },
-                    min: yAxisAuto ? undefined : parseFloat(document.getElementById('y-min-input').value),
-                    max: yAxisAuto ? undefined : parseFloat(document.getElementById('y-max-input').value)
+                    min: Number.isFinite(yMin) ? yMin : undefined,
+                    max: Number.isFinite(yMax) ? yMax : undefined
                 }
             },
             plugins: {
-                legend: { display: true, labels: { color: '#e0e0e0' } },
+                legend: {
+                    display: true,
+                    labels: {
+                        color: '#e0e0e0',
+                        // The marker lines are explained below the plot
+                        filter: (item, data) => !data.datasets[item.datasetIndex].isMarker
+                    }
+                },
                 tooltip: {
+                    filter: (item) => !item.dataset.isMarker,
                     callbacks: {
                         label: (ctx) => {
-                             if (ctx.raw.y === null) return `${ctx.dataset.label}: N/A`;
-                             return `${ctx.dataset.label}: ${ctx.raw.y.toFixed(3)}`;
+                            if (ctx.raw.y === null) return `${ctx.dataset.label}: N/A`;
+                            return `${ctx.dataset.label}: ${ctx.raw.y.toFixed(3)}`;
                         }
                     }
                 }
             }
         }
     });
+}
+
+// --- State in the URL ---
+
+function currentState() {
+    return {
+        seq: currentSeqId,
+        x: xAxisParam,
+        seqParams: { ...currentSeqParams },
+        magnitude: magnitudeMode,
+        agent: { ...agent },
+        tissues: tissues.map(t => ({ name: t.name, color: t.color, params: { ...t.params } }))
+    };
+}
+
+function writeUrlState() {
+    const hash = '#s=' + encodeState(currentState(), paramDefinitions);
+    lastWrittenHash = hash;
+    try {
+        window.history.replaceState(null, '', hash);
+    } catch (err) {
+        // Some browsers do not permit this for local files
+        console.log('URL update error:', err);
+    }
+}
+
+// The URL changes a short time after the last change of a setting
+function scheduleUrlUpdate() {
+    if (!urlReady) return;
+    clearTimeout(urlTimer);
+    urlTimer = setTimeout(writeUrlState, 300);
+}
+
+function readUrlState() {
+    const hash = window.location.hash;
+    if (!hash.startsWith('#s=')) return null;
+    return decodeState(hash.slice(3), {
+        sequences: sequences,
+        paramDefinitions: paramDefinitions,
+        palette: tissueColors,
+        maxTissues: MAX_TISSUES
+    });
+}
+
+function applyState(state) {
+    setTissues(state.tissues);
+    agent = { ...state.agent };
+    magnitudeMode = state.magnitude;
+    document.getElementById('agent-chk').checked = agent.on;
+    document.getElementById('magnitude-chk').checked = magnitudeMode;
+    setSequence(state.seq, state.seqParams, state.x);
+}
+
+function copyLink() {
+    const btn = document.getElementById('copy-link-btn');
+    clearTimeout(urlTimer);
+    writeUrlState();
+    const done = () => flashButton(btn, 'Copied');
+    const failed = () => flashButton(btn, 'Copy the URL');
+    if (window.navigator.clipboard && window.navigator.clipboard.writeText) {
+        window.navigator.clipboard.writeText(window.location.href).then(done, failed);
+    } else {
+        failed();
+    }
+}
+
+// --- Export ---
+
+function downloadFile(href, filename) {
+    const link = document.createElement('a');
+    link.href = href;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+}
+
+function exportCsv() {
+    if (!lastPlot) return;
+    const blob = new Blob([buildCsv(lastPlot.xLabel, lastPlot.series)], { type: 'text/csv;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    downloadFile(url, `mri-signal-${currentSeqId}.csv`);
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+function exportPng() {
+    const source = document.getElementById('signalChart');
+    // The chart has a transparent background: put the page colour behind it
+    const canvas = document.createElement('canvas');
+    canvas.width = source.width;
+    canvas.height = source.height;
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#1e1e1e';
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.drawImage(source, 0, 0);
+    downloadFile(canvas.toDataURL('image/png'), `mri-signal-${currentSeqId}.png`);
 }
 
 // Start

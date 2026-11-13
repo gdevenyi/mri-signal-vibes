@@ -2,12 +2,27 @@ const browserGlobals = {
   window: "readonly",
   document: "readonly",
   console: "readonly",
-  Math: "readonly",
-  JSON: "readonly",
-  parseFloat: "readonly",
   MathJax: "readonly",
   Chart: "readonly",
-  setTimeout: "readonly"
+  Blob: "readonly",
+  URL: "readonly",
+  setTimeout: "readonly",
+  clearTimeout: "readonly"
+};
+
+// Globals of sequences.js and logic.js that script.js uses
+const appGlobals = {
+  sequences: "readonly",
+  paramDefinitions: "readonly",
+  referenceData: "readonly",
+  applyContrastAgent: "readonly",
+  limitT2s: "readonly",
+  ernstAngle: "readonly",
+  analyzeContrast: "readonly",
+  buildCsv: "readonly",
+  encodeState: "readonly",
+  decodeState: "readonly",
+  MAX_NAME_LENGTH: "readonly"
 };
 
 const rules = {
@@ -21,13 +36,12 @@ export default [
     languageOptions: {
       ecmaVersion: "latest",
       sourceType: "script",
-      // `sequences` comes from sequences.js, `referenceData` from reference-data.js
-      globals: { ...browserGlobals, sequences: "readonly", referenceData: "readonly" }
+      globals: { ...browserGlobals, ...appGlobals }
     },
     rules
   },
   {
-    files: ["sequences.js", "reference-data.js"],
+    files: ["sequences.js", "logic.js", "reference-data.js"],
     languageOptions: {
       ecmaVersion: "latest",
       sourceType: "script",

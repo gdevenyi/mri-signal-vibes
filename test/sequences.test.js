@@ -32,14 +32,20 @@ test('each sequence gives a finite signal with |S| <= Rho on a parameter grid', 
             for (const TR of [5, 20, 100, 500, 3000]) {
                 for (const Theta of [1, 10, 30, 60, 90, 120, 179, 180]) {
                     for (const TI of [0, 150, 1000]) {
-                        const seqP = { TR, TE: Math.min(TR, 80), TI, Theta, ETL: 1, ESP: 10 };
-                        if (seq.valid && !seq.valid(seqP)) continue;
-                        const s = seq.calc(seqP, tissue);
-                        const where = `${id} TR=${TR} Theta=${Theta} TI=${TI}`;
-                        assert.ok(Number.isFinite(s), `${where}: ${s}`);
-                        // DESS combines two signals, so its limit is sqrt(2) * Rho
-                        const limit = (id === 'DESS' ? Math.SQRT2 : 1) * tissue.Rho + 1e-9;
-                        assert.ok(Math.abs(s) <= limit, `${where}: ${s}`);
+                        // Two sets of inversion times: TI2 < TI1 (DIR) and TI1 < TI2 (MP2RAGE)
+                        for (const [TI1, TI2] of [[400, 60], [60, 400]]) {
+                            const seqP = {
+                                TR, TE: Math.min(TR, 80), TI, Theta, ETL: 1, ESP: 10,
+                                TI1, TI2, N: 3, Theta2: 7, Phi: 30, B: 500
+                            };
+                            if (seq.valid && !seq.valid(seqP)) continue;
+                            const s = seq.calc(seqP, { ...tissue, ADC: 0.8 });
+                            const where = `${id} TR=${TR} Theta=${Theta} TI=${TI} TI1=${TI1}`;
+                            assert.ok(Number.isFinite(s), `${where}: ${s}`);
+                            // DESS combines two signals, so its limit is sqrt(2) * Rho
+                            const limit = (id === 'DESS' ? Math.SQRT2 : 1) * tissue.Rho + 1e-9;
+                            assert.ok(Math.abs(s) <= limit, `${where}: ${s}`);
+                        }
                     }
                 }
             }
