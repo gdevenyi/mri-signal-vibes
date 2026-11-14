@@ -1,12 +1,26 @@
 # MRI Signal Vibes
 
-A web-interactive tool designed to simulate MRI signal intensity and contrast for various pulse sequences. This simulator allows researchers, students, and clinicians to visualize how scanner parameters and tissue properties influence the final MRI signal.
+MRI Signal Vibes is a web page that calculates the MRI signal of tissues for common pulse sequences. It plots the signal as a function of one scanner setting (for example TR, TE, TI or the flip angle). Researchers, students and clinicians can use it to see how the scanner settings and the tissue properties (T1, T2, T2\*, proton density and ADC) change the image contrast.
+
+The equations have ideal pulses and no noise. They do not include image reconstruction, coil sensitivity or artifacts. Use the results to learn and to plan, not for clinical decisions.
+
+## Usage
+
+Open `index.html` in a modern web browser. No build step or server is necessary. The page loads Chart.js and MathJax from a CDN, so it needs an internet connection.
+
+The page opens on the **About** page, which explains the purpose of the simulator and how to use it. A link from **Copy link** opens the simulator directly.
+
+1. Select a pulse sequence in the menu on the left.
+2. Set the scanner settings with the sliders, or type a value.
+3. Select the parameter of the X-axis.
+4. Change the tissues: edit the values, add a tissue with **+** or with the **Add preset…** list, or remove a tissue. The simulator starts with the 1.5 T brain presets. Use **Load to Sim** on the **Reference Values** page to load the 3 T or 7 T presets, and **Add to Sim** to add one published tissue.
+5. Read the contrast results and the optimal parameter values below the plot.
 
 ## Features
 
 ### Pulse Sequences
 
-Comprehensive support for common MRI sequences with mathematically accurate signal equations:
+The simulator has these sequences:
 
 - **Saturation Recovery (SR)**: T1 recovery after a 90° pulse, with T2 decay
 - **Spin Echo (SE)**: Full spin echo formulation with T1 recovery and T2 decay
@@ -33,8 +47,8 @@ Comprehensive support for common MRI sequences with mathematically accurate sign
 
 ### Interactive Visualization
 
-- **Real-time Plotting**: Signal intensity curves update instantly as parameters change
-- **Multi-Tissue Comparison**: Visualize up to 5 different tissues simultaneously
+- **Live plot**: The curves change immediately when a setting changes
+- **Tissue comparison**: Up to 5 tissues on one plot
 - **Contrast Markers**: Vertical lines at the points of maximum difference and maximum ratio (explained below the plot, not in the legend)
 - **Ernst Angle**: For SPGR and GRE-EPI, the Ernst angle of each tissue, with a marker line when the flip angle is the X-axis
 - **Flexible X-Axis**: Plot signal vs. any sequence parameter (TR, TE, TI, Flip Angle, ETL, ESP, b-value, off-resonance and others)
@@ -44,7 +58,7 @@ Comprehensive support for common MRI sequences with mathematically accurate sign
 
 ### Tissue Library
 
-Tissue presets at multiple field strengths (human brain, in vivo):
+Tissue presets at three field strengths (human brain, in vivo):
 
 - **1.5T**: White Matter, Gray Matter, CSF
 - **3.0T**: White Matter, Gray Matter, CSF
@@ -112,35 +126,28 @@ The range of the time parameters and of the b-value becomes larger when you type
 - ADC (Apparent Diffusion Coefficient, DWI only): 0-3.5 × 10⁻³ mm²/s
 - C (Contrast agent concentration, with the Contrast agent option): 0-5 mM
 
+**Contrast agent settings** (with the Contrast agent option):
+
+- r1, r2 (Relaxivities): 0-30 per mM per second
+
 ### Contrast Analysis
 
-Automatic calculation and visualization of:
+The simulator calculates these values for each pair of tissues and shows them below the plot:
 
 - **Maximum Signal Difference**: Largest absolute difference between tissue pairs
 - **Maximum Signal Ratio**: Largest ratio between tissue pairs
 - **Maximum Difference / √TR**: The signal difference for each unit of scan time (TR in seconds). The maximum difference alone favours a long TR, which is not the best choice when the scan time is fixed.
-- **Optimal Parameter Values**: Shows where maximum contrast occurs
+- **Optimal Parameter Values**: The X-axis value of each maximum
 
 ## Technology Stack
 
-- **Frontend**: HTML5, CSS3 (Vanilla), JavaScript (ES6+)
+- **Frontend**: HTML, CSS and JavaScript, with no framework
 - **Charts**: [Chart.js](https://www.chartjs.org/) for interactive plotting
 - **Mathematics**: [MathJax](https://www.mathjax.org/) for equation rendering
 
-## Usage
-
-Simply open `index.html` in a modern web browser. No build process or server required.
-
-1. Select a pulse sequence from the navigation
-2. Adjust sequence parameters using the sliders
-3. Modify tissue properties, load presets (1.5T, 3.0T, 7.0T) or add tissues from the Reference Values page
-4. Add/remove tissues for comparison
-5. Change the X-axis parameter to explore different relationships
-6. Observe contrast metrics and optimal parameter values
-
 ## Development
 
-The parameters and signal equations are in `sequences.js`, the calculations of the interface (contrast agent, contrast analysis, CSV, state in the URL) are in `logic.js`, the tissue presets are in `presets.js`, and the literature reference values are in `reference-data.js`. These files have no DOM code. The user interface is in `script.js`.
+The parameters and signal equations are in `sequences.js`, the calculations of the interface (contrast agent, contrast analysis, CSV, state in the URL) are in `logic.js`, the tissue presets are in `presets.js`, and the literature reference values are in `reference-data.js`. These files have no DOM code. The user interface is in `script.js`. The text of the About page is in `index.html`.
 
 Run the tests of the signal equations, of the reference data and of the presets with Node.js (no packages are necessary):
 
@@ -163,7 +170,7 @@ The equations of bSSFP with off-resonance, DIR, MPRAGE and MP2RAGE are compared 
 
 ## Mathematical Formulations
 
-All sequences use validated mathematical models from MRI physics literature. The FSE/TSE implementation uses the full spin echo formulation with echo train summation:
+The signal equations come from the MRI physics literature (see References). The FSE/TSE equation uses the full spin echo equation and sums the signal of all echoes in the train:
 
 $$S = \frac{\rho}{ETL} \sum_{k=1}^{ETL} \left[1 - 2\exp\left(-\frac{TR-TE_k/2}{T_1}\right) + \exp\left(-\frac{TR}{T_1}\right)\right] \cdot \exp\left(-\frac{TE_k}{T_2}\right)$$
 

@@ -20,7 +20,7 @@ const BASE_TISSUE_KEYS = ['Rho', 'T1', 'T2', 'T2s'];
 
 // --- State ---
 let currentSeqId = 'SE';
-let currentMode = 'sim'; // 'sim' or 'ref'
+let currentMode = 'sim'; // 'sim', 'ref' or 'about'
 let currentSeqParams = {};
 let tissues = [];
 let nextTissueId = 1;
@@ -76,6 +76,8 @@ function init() {
         btn.addEventListener('click', (e) => {
             if (e.target.dataset.mode === 'ref') {
                 setReferenceMode();
+            } else if (e.target.dataset.mode === 'about') {
+                setAboutMode();
             } else {
                 setSequence(e.target.dataset.seq);
             }
@@ -138,6 +140,7 @@ function init() {
     document.getElementById('export-csv-btn').addEventListener('click', exportCsv);
     document.getElementById('export-png-btn').addEventListener('click', exportPng);
     document.getElementById('copy-link-btn').addEventListener('click', copyLink);
+    document.getElementById('about-start-btn').addEventListener('click', showSimulator);
 
     renderPresetTable();
     initReferenceTable();
@@ -148,7 +151,9 @@ function init() {
     if (linked) {
         applyState(linked);
     } else {
+        // Without a link, the page opens on the About page
         setSequence('SE');
+        currentMode = 'about';
     }
     updateView();
 
@@ -684,9 +689,22 @@ function setReferenceMode() {
     updateView();
 }
 
+function setAboutMode() {
+    currentMode = 'about';
+    updateView();
+}
+
+// Go back to the simulator and keep the current settings
+function showSimulator() {
+    currentMode = 'sim';
+    updateView();
+    updateUI();
+}
+
 function updateView() {
     const simView = document.getElementById('simulator-view');
     const refView = document.getElementById('reference-view');
+    const aboutView = document.getElementById('about-view');
     const eqPanel = document.getElementById('equation-display').parentElement; // Equation panel
     const plotControls = document.querySelector('.plot-controls'); // Controls in header
 
@@ -694,10 +712,17 @@ function updateView() {
     document.querySelectorAll('.nav-btn').forEach(btn => {
         btn.classList.remove('active');
         if (currentMode === 'sim' && btn.dataset.seq === currentSeqId) btn.classList.add('active');
-        if (currentMode === 'ref' && btn.dataset.mode === 'ref') btn.classList.add('active');
+        if (currentMode !== 'sim' && btn.dataset.mode === currentMode) btn.classList.add('active');
     });
 
-    if (currentMode === 'ref') {
+    aboutView.style.display = currentMode === 'about' ? 'block' : 'none';
+    if (currentMode === 'about') {
+        simView.style.display = 'none';
+        refView.style.display = 'none';
+        eqPanel.style.display = 'none';
+        plotControls.style.display = 'none';
+        document.getElementById('current-sequence-title').textContent = 'About';
+    } else if (currentMode === 'ref') {
         simView.style.display = 'none';
         refView.style.display = 'block';
         eqPanel.style.display = 'none'; // Hide equation in ref mode

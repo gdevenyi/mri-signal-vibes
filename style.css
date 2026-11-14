@@ -779,3 +779,32 @@ body {
     color: var(--error);
     font-style: italic;
 }
+
+/* About page */
+.about-panel {
+    line-height: 1.6;
+}
+
+.about-panel h3:not(:first-child) {
+    margin-top: 1.5rem;
+}
+
+.about-panel p,
+.about-panel ul,
+.about-panel ol {
+    max-width: 75ch;
+    margin-bottom: 0.75rem;
+}
+
+.about-panel ul,
+.about-panel ol {
+    padding-left: 1.5rem;
+}
+
+.about-panel li {
+    margin-bottom: 0.4rem;
+}
+
+.about-start-btn {
+    margin-top: 1rem;
+}

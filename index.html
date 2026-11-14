@@ -22,6 +22,8 @@
                 <p>Vibe-Coded MRI Signal Intensity Simulator</p>
             </div>
             <nav class="sequence-nav">
+                <button class="nav-btn" id="about-nav-btn" data-mode="about">About</button>
+                <div class="nav-separator"></div>
                 <button class="nav-btn" data-seq="SR">Saturation Recovery (SR)</button>
                 <button class="nav-btn active" data-seq="SE">Spin Echo (SE)</button>
                 <button class="nav-btn" data-seq="FSE">Fast Spin Echo (FSE)</button>
@@ -130,6 +132,63 @@
                 </div>
                 <p id="notes-display" class="notes-text"></p>
                 <p id="citation-display" class="citation-text"></p>
+            </div>
+            <div id="about-view" class="reference-panel about-panel" style="display: none;">
+                <h3>What the simulator does</h3>
+                <p>
+                    MRI Signal Vibes calculates the MRI signal of different tissues for a pulse sequence. It plots the
+                    signal as a function of one scanner setting, for example TR, TE, TI or the flip angle. Use it to
+                    learn how the scanner settings and the tissue properties (T1, T2, T2*, proton density and ADC)
+                    change the image contrast, and to find the settings that give the largest contrast between two
+                    tissues.
+                </p>
+                <p>
+                    The simulator uses the signal equation of each sequence. The equations have ideal pulses and no
+                    noise. They do not include the image reconstruction, the coil sensitivity or artifacts. Use the
+                    results to learn and to plan. Do not use them for clinical decisions.
+                </p>
+
+                <h3>How to use it</h3>
+                <ol>
+                    <li>Select a pulse sequence in the menu on the left. The page shows its signal equation and its
+                        source below the plot.</li>
+                    <li>Set the scanner settings with the sliders or type a value. The plot changes immediately.</li>
+                    <li>Select the parameter of the X-axis in the <strong>X-Axis</strong> list at the top. The plot
+                        shows the signal from the minimum to the maximum of that parameter, and uses the slider
+                        values for all other parameters.</li>
+                    <li>Change the tissues in the <strong>Tissue Library</strong>. The simulator starts with white
+                        matter, gray matter and CSF at 1.5 T. Edit a value, add a tissue with <strong>+</strong> or
+                        with the <strong>Add preset…</strong> list, or remove a tissue. You can compare up to 5
+                        tissues.</li>
+                    <li>Read the contrast results below the plot. Two vertical lines show the X-axis values with the
+                        largest signal difference and the largest signal ratio between two tissues.</li>
+                </ol>
+
+                <h3>Other functions</h3>
+                <ul>
+                    <li><strong>Null</strong> (IR and DIR): sets the inversion time so that the signal of that tissue
+                        is zero, as in STIR and FLAIR.</li>
+                    <li><strong>Magnitude</strong> (inversion sequences): shows the absolute value of the signal, as in
+                        a magnitude image.</li>
+                    <li><strong>Contrast agent</strong>: gives each tissue a concentration of a gadolinium agent. The
+                        relaxivities r1 and r2 are in the scanner settings.</li>
+                    <li><strong>CSV</strong> and <strong>PNG</strong>: download the curves as a table or the plot as
+                        an image.</li>
+                    <li><strong>Copy link</strong>: copies a link that opens the same sequence, settings and tissues.
+                    </li>
+                    <li><strong>Reference Values</strong>: shows published tissue values with their sources. Use
+                        <strong>Load to Sim</strong> to load the 1.5 T, 3 T or 7 T brain presets, and
+                        <strong>Add to Sim</strong> to add one published tissue to the simulator.</li>
+                </ul>
+
+                <h3>Limits of the values</h3>
+                <p>
+                    Each tissue preset is the value of one published measurement, not an average. Tissue values
+                    change with the age, the brain region, the disease and the measurement method. Some values have
+                    no published source and have the mark "illustrative" on the Reference Values page.
+                </p>
+
+                <button id="about-start-btn" class="tool-btn about-start-btn">Open the simulator</button>
             </div>
             <div id="reference-view" class="reference-panel" style="display: none;">
                 <h3>Tissue Presets</h3>
