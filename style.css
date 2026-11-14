@@ -766,6 +766,10 @@ body {
     vertical-align: top;
 }
 
+.preset-table .field-col .lit-small {
+    font-weight: 400;
+}
+
 .preset-table .lit-small a {
     color: var(--primary);
     text-decoration: none;

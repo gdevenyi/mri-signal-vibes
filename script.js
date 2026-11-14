@@ -461,7 +461,11 @@ function renderPresetTable() {
         btn.addEventListener('click', () => loadPreset(strength));
         addGroup(strength, parseFloat(strength), REFERENCE_PRESETS[strength], btn);
     });
-    addGroup('Add preset list', 3, EXTRA_TISSUES, null);
+    // These tissues have no button: the simulator adds them one at a time
+    const note = document.createElement('span');
+    note.className = 'lit-small';
+    note.textContent = 'To add one, use the "Add preset…" list of the Tissue Library in the simulator';
+    addGroup('Other tissues', 3, EXTRA_TISSUES, note);
 }
 
 // --- Contrast agent relaxivity table (data in reference-data.js) ---
