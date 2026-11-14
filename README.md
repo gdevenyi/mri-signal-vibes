@@ -72,7 +72,7 @@ Each preset value is the value of one row of the literature table, and the **Ref
 
 The **Contrast agent** option gives each tissue a concentration $C$ (mM). The relaxivities $r_1$ and $r_2$ are in the scanner settings:
 
-$$\frac{1}{T_1'} = \frac{1}{T_1} + r_1 C, \qquad \frac{1}{T_2'} = \frac{1}{T_2} + r_2 C, \qquad \frac{1}{T_2^{*\prime}} = \frac{1}{T_2^*} + r_2 C$$
+$$\frac{1}{T_{1}^{\prime}} = \frac{1}{T_{1}} + r_{1} C, \qquad \frac{1}{T_{2}^{\prime}} = \frac{1}{T_{2}} + r_{2} C, \qquad \frac{1}{T_{2}^{\ast\prime}} = \frac{1}{T_{2}^{\ast}} + r_{2} C$$
 
 The default relaxivities ($r_1 = 3.6$, $r_2 = 4.3$ per mM per second) are those of gadoterate in bovine plasma at 1.5 T and 37 °C (Rohrer et al., Invest Radiol 2005;40:715-724). The relaxivity depends on the agent, the field strength, the medium and the temperature. The **Reference Values** page has a table of published relaxivities, and a button on each row sets $r_1$ and $r_2$ of the simulator.
 
@@ -180,7 +180,7 @@ The simulator shows no signal when the echo train does not fit in the repetition
 
 The FISP equation image on MRIQuestions.com contains two errors (the sign of an exponent and a missing $\cos\theta$) that give negative signals. The simulator uses the SSFP-FID solution from Hänicke & Vogel (2003), which becomes the SPGR equation when $T_2 \to 0$:
 
-$$S = \rho \tan\left(\frac{\theta}{2}\right) \left[1 - (E_1 - \cos\theta) \sqrt{\frac{1 - E_2^2}{(1 - E_1\cos\theta)^2 - E_2^2 (E_1 - \cos\theta)^2}}\right] e^{-TE/T_2^*}$$
+$$S = \rho \tan\left(\frac{\theta}{2}\right) \left[1 - (E_1 - \cos\theta) \sqrt{\frac{1 - E_2^2}{(1 - E_1\cos\theta)^2 - E_2^2 (E_1 - \cos\theta)^2}}\right] e^{-TE/T_2^{\ast}}$$
 
 Where $E_1 = e^{-TR/T_1}$ and $E_2 = e^{-TR/T_2}$.
 
